@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'crypto';
+import { UserRole } from './roles.constants';
 
 @Injectable()
 export class AuthService {
@@ -38,6 +39,7 @@ export class AuthService {
           name: dto.name,
           email: dto.email,
           password: hashedPassword,
+          role: UserRole.EMPLOYEE,
         },
       });
 
@@ -88,7 +90,13 @@ export class AuthService {
 
   // func to generate access token (jwt)
   private generateAccessToken(user: any) {
-    const payload = { sub: user.id, email: user.email, name: user.name, role: user.role };
+    const payload = { 
+      sub: user.id, 
+      email: user.email, 
+      name: user.name, 
+      role: user.role,
+      isOwner: user.isOwner,
+    };
     return this.jwtService.sign(payload, { expiresIn: '20m' });
   }
 

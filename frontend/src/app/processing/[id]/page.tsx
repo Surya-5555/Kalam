@@ -21,6 +21,7 @@ import {
   AiExtractionResult,
   CanonicalInvoice,
 } from "@/lib/api/invoice";
+import { RoleProtected } from "@/components/auth/role-protected";
 
 // ── Stage metadata ────────────────────────────────────────────────────────────
 
@@ -323,6 +324,7 @@ export default function ProcessingPage() {
   );
 
   return (
+    <RoleProtected mode="employee">
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
@@ -477,5 +479,6 @@ export default function ProcessingPage() {
         )}
       </main>
     </div>
+    </RoleProtected>
   );
 }

@@ -56,6 +56,7 @@ import { RawJsonSection } from "@/components/invoice-results/raw-json-section";
 import { SectionCard } from "@/components/invoice-results/section-card";
 import { ExportActions } from "@/components/invoice-results/export-actions";
 import { WarningsPanel } from "@/components/invoice-results/warnings-panel";
+import { RoleProtected } from "@/components/auth/role-protected";
 
 // Skip SSR for the PDF/image preview — it relies on browser APIs (Blob,
 // ResizeObserver, PDF.js worker) that do not exist on the server.
@@ -369,6 +370,7 @@ export default function ResultsPage() {
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
+      <RoleProtected mode="employee">
       <div className="min-h-screen bg-slate-50 font-sans">
         <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center">
@@ -398,12 +400,14 @@ export default function ResultsPage() {
           </div>
         </main>
       </div>
+      </RoleProtected>
     );
   }
 
   // ── Error state ───────────────────────────────────────────────────────────
   if (error || !doc) {
     return (
+      <RoleProtected mode="employee">
       <div className="min-h-screen bg-slate-50 font-sans flex items-center justify-center px-6">
         <div className="text-center space-y-4">
           <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
@@ -416,6 +420,7 @@ export default function ResultsPage() {
           </Button>
         </div>
       </div>
+      </RoleProtected>
     );
   }
 
@@ -424,6 +429,7 @@ export default function ResultsPage() {
   const currency = inv?.invoice.currency ?? null;
 
   return (
+    <RoleProtected mode="employee">
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
@@ -592,5 +598,6 @@ export default function ResultsPage() {
         )}
       </main>
     </div>
+    </RoleProtected>
   );
 }

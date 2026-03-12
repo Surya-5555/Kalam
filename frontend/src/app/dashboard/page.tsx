@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { LogOut, FileText } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { InvoiceDocument, getRecentInvoices } from "@/lib/api/invoice";
 import { InvoiceCard } from "@/components/ui/invoice-card";
+import { RoleProtected } from "@/components/auth/role-protected";
+import { AppShell } from "@/components/layout/app-shell";
 
 export default function DashboardPage() {
   const { user, accessToken, logout } = useAuth();
@@ -59,38 +61,23 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 font-bold text-xl text-slate-900 cursor-pointer" onClick={() => router.push('/')}>
-            <span>Automator</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button onClick={handleLogout} variant="ghost" className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full">
-              <LogOut className="size-4 mr-2" />
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="pt-28 pb-16 px-6 max-w-7xl mx-auto relative z-10">
-        <div className="mb-12">
-          <h1 className="text-3xl font-bold tracking-tight text-black mb-2">Invoice Dashboard</h1>
-          <p className="text-slate-600 font-medium">Upload your supplier invoices for automatic data extraction.</p>
-        </div>
-
-        {/* Quick actions */}
-        <div className="flex gap-4 mb-8">
+    <RoleProtected mode="employee">
+      <AppShell
+        user={user}
+        onLogout={handleLogout}
+        title="Employee Workspace"
+        subtitle="Upload invoices, monitor extraction status, and review normalized output without changing the existing employee flow."
+        actions={
           <Button
             onClick={() => router.push('/create-invoice')}
-            className="bg-slate-900 hover:bg-slate-700 text-white rounded-xl px-6 h-11 text-sm font-semibold shadow-sm"
+            className="rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-700"
           >
-            <FileText className="w-4 h-4 mr-2" />
+            <FileText className="mr-2 h-4 w-4" />
             Create &amp; Pay Invoice
           </Button>
-        </div>
+        }
+      >
+        <section className="space-y-6">
 
         {uploadError && (
           <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center space-x-3 text-rose-900 shadow-sm">
@@ -106,7 +93,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xs mb-16">
+        <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
           <FileUpload
             onUploadSuccess={onUploadSuccess}
             onUploadError={onUploadError}
@@ -114,7 +101,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Documents Grid */}
-        <div>
+        <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
           <h2 className="text-xl font-bold mb-6 flex items-center text-black">
             <FileText className="w-5 h-5 mr-2 text-slate-400" />
             Recent Documents
@@ -153,7 +140,8 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </main>
-    </div>
+        </section>
+      </AppShell>
+    </RoleProtected>
   );
 }

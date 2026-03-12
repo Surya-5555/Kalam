@@ -4,17 +4,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { getAccessToken, setAccessToken, clearAccessToken } from '@/lib/auth';
 import { API_BASE_URL } from '@/lib/constants';
 import { jwtDecode } from 'jwt-decode';
-
-interface UserType {
-  sub: number;
-  email: string;
-  name: string;
-  role: string | null;
-}
+import type { AuthUser } from '@/lib/role-routing';
 
 type AuthContextType = {
   accessToken: string | null;
-  user: UserType | null;
+  user: AuthUser | null;
   login: (token: string) => void;
   logout: () => void;
 };
@@ -23,13 +17,13 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [accessToken, setToken] = useState<string | null>(null);
-  const [user, setUser] = useState<UserType | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     const token = getAccessToken();
     if (token) {
       try {
-        const decoded = jwtDecode<UserType>(token);
+        const decoded = jwtDecode<AuthUser>(token);
         setToken(token);
         setUser(decoded);
       } catch (error) {
@@ -53,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       try {
-        const decoded = jwtDecode<UserType>(nextToken);
+        const decoded = jwtDecode<AuthUser>(nextToken);
         setUser(decoded);
       } catch (error) {
         console.error('Failed to decode updated token:', error);
@@ -69,7 +63,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = (token: string) => {
     try {
-      const decoded = jwtDecode<UserType>(token);
+      const decoded = jwtDecode<AuthUser>(token);
       setAccessToken(token);
       setToken(token);
       setUser(decoded);

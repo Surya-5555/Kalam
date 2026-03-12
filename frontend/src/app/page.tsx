@@ -1,12 +1,30 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, FileText, Zap, Shield, LogOut, User } from "lucide-react";
+import { ArrowRight, FileText, Zap, Shield } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { getDefaultRouteForRole } from "@/lib/role-routing";
 
 export default function Home() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      router.replace(getDefaultRouteForRole(user.role));
+    }
+  }, [router, user]);
+
+  if (user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="size-10 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900" />
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-slate-200 relative overflow-hidden font-sans">
@@ -17,27 +35,12 @@ export default function Home() {
             <span>Automator</span>
           </div>
           <div className="flex items-center gap-4">
-            {user ? (
-              <>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200">
-                  <User className="size-4 text-slate-500" />
-                  <span className="text-sm font-medium text-slate-700">{user.name || "User"}</span>
-                </div>
-                <Button onClick={logout} variant="outline" className="rounded-full shadow-sm hover:shadow-md transition-all border-slate-200 bg-white hover:bg-slate-50 text-slate-700">
-                  <LogOut className="mr-2 size-4" />
-                  Sign out
-                </Button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
-                  Log in
-                </Link>
-                <Button asChild className="rounded-full shadow-none transition-all bg-black hover:bg-slate-800 text-white border-0">
-                  <Link href="/login">Get Started</Link>
-                </Button>
-              </>
-            )}
+            <Link href="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors">
+              Log in
+            </Link>
+            <Button asChild className="rounded-full shadow-none transition-all bg-black hover:bg-slate-800 text-white border-0">
+              <Link href="/login">Get Started</Link>
+            </Button>
           </div>
         </div>
       </nav>
@@ -62,21 +65,12 @@ export default function Home() {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center gap-4">
-          {user ? (
-            <Button asChild size="lg" className="rounded-full h-14 px-8 text-base shadow-none hover:-translate-y-0.5 transition-all bg-black hover:bg-slate-800 text-white border-0">
-              <Link href="/dashboard">
-                Go to Dashboard
-                <ArrowRight className="ml-2 size-5" />
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild size="lg" className="rounded-full h-14 px-8 text-base shadow-none hover:-translate-y-0.5 transition-all bg-black hover:bg-slate-800 text-white border-0">
-              <Link href="/login">
-                Start Processing
-                <ArrowRight className="ml-2 size-5" />
-              </Link>
-            </Button>
-          )}
+          <Button asChild size="lg" className="rounded-full h-14 px-8 text-base shadow-none hover:-translate-y-0.5 transition-all bg-black hover:bg-slate-800 text-white border-0">
+            <Link href="/login">
+              Start Processing
+              <ArrowRight className="ml-2 size-5" />
+            </Link>
+          </Button>
         </div>
 
         {/* Features Preview */}

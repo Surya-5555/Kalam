@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL } from "@/lib/constants";
 import { useRouter } from "next/navigation";
+import { getDefaultRouteForRole } from "@/lib/role-routing";
 
 interface PupilProps {
   size?: number;
@@ -198,7 +199,7 @@ export function AnimatedAuthPage({ initialMode = "login" }: AnimatedAuthPageProp
   const yellowRef = useRef<HTMLDivElement>(null);
   const orangeRef = useRef<HTMLDivElement>(null);
 
-  const { login } = useAuth();
+  const { login, accessToken, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -211,16 +212,15 @@ export function AnimatedAuthPage({ initialMode = "login" }: AnimatedAuthPageProp
   }, []);
 
   // Redirect if already logged in
-  const { accessToken } = useAuth();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
     if (accessToken) {
-      router.replace("/");
+      router.replace(getDefaultRouteForRole(user?.role));
     } else {
       setIsCheckingAuth(false);
     }
-  }, [accessToken, router]);
+  }, [accessToken, router, user?.role]);
 
 
 
@@ -314,7 +314,7 @@ export function AnimatedAuthPage({ initialMode = "login" }: AnimatedAuthPageProp
 
         const data = await res.json();
         login(data.accessToken);
-        router.push("/");
+        router.push(getDefaultRouteForRole(data.user?.role));
       } else {
         // Signup
         const res = await fetch(`${API_BASE_URL}/auth/signup`, {

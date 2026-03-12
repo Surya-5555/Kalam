@@ -20,6 +20,7 @@ import {
   InvoiceItem,
   GeneratedInvoice,
 } from "@/lib/api/generated-invoice";
+import { RoleProtected } from "@/components/auth/role-protected";
 
 // ── Razorpay global type ───────────────────────────────────────────────────────
 declare global {
@@ -383,6 +384,7 @@ export default function CreateInvoicePage() {
 
   // ── Form ─────────────────────────────────────────────────────────────────────
   return (
+    <RoleProtected mode="employee">
     <div className="min-h-screen bg-slate-50 text-slate-900">
       {/* Nav */}
       <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
@@ -613,6 +615,7 @@ export default function CreateInvoicePage() {
         </Button>
       </main>
     </div>
+    </RoleProtected>
   );
 }
 

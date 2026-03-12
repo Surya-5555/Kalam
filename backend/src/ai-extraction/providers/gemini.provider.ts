@@ -35,11 +35,15 @@ export class GeminiProvider implements LlmProvider {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
+  /** Max ms to wait for a single Gemini HTTP response (default 60 s). */
+  private readonly timeoutMs: number;
 
   constructor(private readonly config: ConfigService) {
     this.apiKey = this.config.get<string>('GEMINI_API_KEY') ?? '';
     this.model =
       this.config.get<string>('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+    this.timeoutMs =
+      Number(this.config.get<string>('AI_EXTRACTION_TIMEOUT_MS') ?? '60000');
 
     if (!this.apiKey) {
       this.logger.warn(
@@ -87,11 +91,33 @@ export class GeminiProvider implements LlmProvider {
       },
     });
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: requestBody,
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      this.timeoutMs,
+    );
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody,
+        signal: controller.signal,
+      });
+    } catch (err: unknown) {
+      if (
+        err instanceof Error &&
+        (err.name === 'AbortError' || err.message.includes('abort'))
+      ) {
+        throw new Error(
+          `Gemini API timed out after ${this.timeoutMs / 1000}s`,
+        );
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorBody = await response.text().catch(() => '');

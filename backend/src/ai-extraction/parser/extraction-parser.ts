@@ -1,3 +1,4 @@
+import { jsonrepair } from 'jsonrepair';
 import {
   ExtractedInvoiceDto,
   SupplierDetailsDto,
@@ -206,11 +207,23 @@ export interface ParseResult {
  * @throws {Error} if the response cannot be parsed as valid JSON.
  */
 export function parseExtractionResponse(rawResponse: string): ParseResult {
-  const cleaned = sanitizeResponse(rawResponse);
+  // 1. Strip markdown fences and extract the outermost JSON object
+  const extracted = extractJsonObject(rawResponse);
+
+  // 2. Use jsonrepair to fix any remaining LLM quirks (trailing commas,
+  //    unescaped control chars, single quotes, JS comments, etc.)
+  let repaired: string;
+  try {
+    repaired = jsonrepair(extracted);
+  } catch (repairErr) {
+    throw new Error(
+      `Failed to repair AI response as JSON: ${(repairErr as Error).message}`,
+    );
+  }
 
   let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    parsed = JSON.parse(repaired) as Record<string, unknown>;
   } catch (err) {
     throw new Error(
       `Failed to parse AI response as JSON: ${(err as Error).message}`,
@@ -237,41 +250,21 @@ export function parseExtractionResponse(rawResponse: string): ParseResult {
 }
 
 /**
- * Robustly extracts a JSON object from an LLM response that may contain:
- *  - Markdown code fences (```json … ``` or ``` … ```)
- *  - Preamble / postamble text ("Here is the result:" … "Hope this helps!")
- *  - A bare JSON object with no fences
- *  - Trailing commas before } or ] (loose JSON from some model checkpoints)
- *  - JavaScript-style comments (// … or /* … *‌/)
- *
- * Strategy:
- *  1. Strip markdown fences anywhere in the string.
- *  2. Find the first `{` and last `}` — extract that substring.
- *  3. Strip JS comments and trailing commas so JSON.parse doesn't reject them.
+ * Strips markdown fences and extracts the outermost JSON object `{…}` from
+ * the raw LLM response. jsonrepair handles everything else.
  */
-function sanitizeResponse(raw: string): string {
+function extractJsonObject(raw: string): string {
   let s = raw.trim();
 
-  // 1. Remove all markdown code fences (```json, ```JSON, ```, etc.)
-  s = s.replace(/```(?:json|JSON)?\s*/g, '').replace(/```/g, '');
+  // Remove markdown code fences
+  s = s.replace(/```(?:json|JSON)?\s*/g, '').replace(/```/g, '').trim();
 
-  // 2. Locate the outermost JSON object boundaries
+  // Slice from the first '{' to the last '}' to strip any preamble/postamble
   const start = s.indexOf('{');
   const end   = s.lastIndexOf('}');
-
   if (start !== -1 && end !== -1 && end > start) {
     s = s.slice(start, end + 1);
   }
 
-  // 3. Strip single-line JS comments (// …) that some models emit
-  s = s.replace(/\/\/[^\n]*/g, '');
-
-  // 4. Strip block comments (/* … */)
-  s = s.replace(/\/\*[\s\S]*?\*\//g, '');
-
-  // 5. Remove trailing commas before } or ] — invalid in JSON but common in
-  //    LLM output (e.g. last item in an array followed by a comma)
-  s = s.replace(/,(\s*[}\]])/g, '$1');
-
-  return s.trim();
+  return s;
 }

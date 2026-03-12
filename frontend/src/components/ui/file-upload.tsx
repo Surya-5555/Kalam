@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
 interface FileUploadProps {
-  onUploadSuccess: (documentId: string, filename: string) => void;
+  onUploadSuccess: (documentId: string, filename: string, qualityWarnings: string[]) => void;
   onUploadError: (error: string) => void;
 }
 
@@ -91,13 +91,22 @@ export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) 
         let errMessage = "Upload failed";
         try {
           const errData = await response.json();
-          errMessage = errData.message || errMessage;
-        } catch(e) {}
+          // NestJS wraps nested exception bodies under the `message` key when
+          // they are plain strings, but passes objects through directly.
+          if (typeof errData.message === 'string') {
+            errMessage = errData.message;
+          } else if (Array.isArray(errData.message)) {
+            errMessage = errData.message.join(' ');
+          }
+        } catch {
+          // ignore JSON parse errors
+        }
         throw new Error(errMessage);
       }
 
       const data = await response.json();
-      onUploadSuccess(data.documentId, file.name);
+      const qualityWarnings: string[] = data.inspectionResult?.qualityWarnings ?? [];
+      onUploadSuccess(data.documentId, file.name, qualityWarnings);
       setFile(null);
     } catch (error: any) {
       onUploadError(error.message || "An unexpected error occurred during upload.");

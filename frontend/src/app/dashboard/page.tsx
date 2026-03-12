@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<InvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [uploadStatus, setUploadStatus] = useState<{status: 'idle' | 'success' | 'error', message?: string, docId?: string}>({ status: 'idle' });
+  const [uploadStatus, setUploadStatus] = useState<{status: 'idle' | 'success' | 'error', message?: string, docId?: string, qualityWarnings?: string[]}>({ status: 'idle' });
 
   const fetchInvoices = useCallback(async () => {
     if (!accessToken) return;
@@ -44,11 +44,12 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  const onUploadSuccess = (documentId: string, filename: string) => {
+  const onUploadSuccess = (documentId: string, filename: string, qualityWarnings: string[]) => {
     setUploadStatus({
       status: 'success',
       message: `Successfully uploaded ${filename}`,
-      docId: documentId
+      docId: documentId,
+      qualityWarnings,
     });
     // Refresh the list
     fetchInvoices();
@@ -85,14 +86,30 @@ export default function DashboardPage() {
         </div>
 
         {uploadStatus.status === 'success' && (
-           <div className="mb-8 p-4 bg-white border border-slate-200 rounded-2xl flex items-start sm:items-center space-x-3 text-slate-900 shadow-sm">
-             <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 sm:mt-0 flex-shrink-0" />
-             <div>
-               <p className="font-semibold text-sm">{uploadStatus.message}</p>
+           <div className="mb-8 space-y-3">
+             <div className="p-4 bg-white border border-slate-200 rounded-2xl flex items-start sm:items-center space-x-3 text-slate-900 shadow-sm">
+               <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 sm:mt-0 flex-shrink-0" />
+               <div>
+                 <p className="font-semibold text-sm">{uploadStatus.message}</p>
+               </div>
+               <Button variant="outline" className="ml-auto bg-white border-slate-200 hover:bg-slate-50 text-black rounded-full text-xs shadow-none h-8 font-medium" onClick={() => setUploadStatus({status: 'idle'})}>
+                 Upload Another
+               </Button>
              </div>
-             <Button variant="outline" className="ml-auto bg-white border-slate-200 hover:bg-slate-50 text-black rounded-full text-xs shadow-none h-8 font-medium" onClick={() => setUploadStatus({status: 'idle'})}>
-               Upload Another
-             </Button>
+             {uploadStatus.qualityWarnings && uploadStatus.qualityWarnings.length > 0 && (
+               <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+                 <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-2">Quality Warnings</p>
+                 <ul className="space-y-1">
+                   {uploadStatus.qualityWarnings.map((w, i) => (
+                     <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
+                       <span className="mt-0.5 text-amber-500 shrink-0">&#9888;</span>
+                       {w}
+                     </li>
+                   ))}
+                 </ul>
+                 <p className="text-xs text-amber-700 mt-3 font-medium">This invoice has been queued for manual review before extraction proceeds.</p>
+               </div>
+             )}
            </div>
         )}
 

@@ -1,0 +1,72 @@
+// =========================
+// Prisma Schema - LeetCode-like Platform
+// Cleaned version without streak
+// =========================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================
+// USER TABLE
+// =========================
+model User {
+  id                   Int       @id @default(autoincrement())
+  name                 String
+  role                 String    @default("user")
+  email                String    @unique
+  isEmailVerified      Boolean   @default(false)
+  emailVerifyToken     String?
+  password             String
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  lastLoginAt          DateTime?
+  loginCount           Int       @default(0)
+  isBanned             Boolean   @default(false)
+  twoFactorSecret      String?
+  profilePicture       String?
+  bio                  String?
+  experience           Int       @default(0)
+  level                Int       @default(1)
+  settings             Json?
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+// =========================
+// REFRESH TOKEN TABLE
+// =========================
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique // hashed refresh token
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// =========================
+// Forget Password
+// =========================
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

@@ -27,6 +27,7 @@ import { TotalsSection } from "@/components/invoice-results/totals-section";
 import { ValidationSection } from "@/components/invoice-results/validation-section";
 import { RawJsonSection } from "@/components/invoice-results/raw-json-section";
 import { SectionCard } from "@/components/invoice-results/section-card";
+import { ExportActions } from "@/components/invoice-results/export-actions";
 
 // Skip SSR for the PDF/image preview — it relies on browser APIs (Blob,
 // ResizeObserver, PDF.js worker) that do not exist on the server.
@@ -445,30 +446,39 @@ export default function ResultsPage() {
           </div>
 
           {extracted && (
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-              <span className="flex items-center gap-1.5 text-sm text-slate-500">
-                <Zap className="h-3.5 w-3.5" />
-                {Math.round(extracted.overallConfidence * 100)}% confidence
-              </span>
-              {extracted.businessValidation && (
-                <span
-                  className={`flex items-center gap-1.5 text-sm font-medium ${
-                    extracted.businessValidation.isValid
-                      ? "text-emerald-600"
-                      : "text-rose-600"
-                  }`}
-                >
-                  {extracted.businessValidation.isValid ? (
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <AlertCircle className="h-3.5 w-3.5" />
-                  )}
-                  {extracted.businessValidation.isValid
-                    ? "Passed validation"
-                    : `${extracted.businessValidation.errors.length} validation issue${
-                        extracted.businessValidation.errors.length !== 1 ? "s" : ""
-                      }`}
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-y-2">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                <span className="flex items-center gap-1.5 text-sm text-slate-500">
+                  <Zap className="h-3.5 w-3.5" />
+                  {Math.round(extracted.overallConfidence * 100)}% confidence
                 </span>
+                {extracted.businessValidation && (
+                  <span
+                    className={`flex items-center gap-1.5 text-sm font-medium ${
+                      extracted.businessValidation.isValid
+                        ? "text-emerald-600"
+                        : "text-rose-600"
+                    }`}
+                  >
+                    {extracted.businessValidation.isValid ? (
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <AlertCircle className="h-3.5 w-3.5" />
+                    )}
+                    {extracted.businessValidation.isValid
+                      ? "Passed validation"
+                      : `${extracted.businessValidation.errors.length} validation issue${
+                          extracted.businessValidation.errors.length !== 1 ? "s" : ""
+                        }`}
+                  </span>
+                )}
+              </div>
+              {inv && (
+                <ExportActions
+                  normalizedInvoice={inv}
+                  businessValidation={extracted.businessValidation}
+                  originalName={doc.originalName}
+                />
               )}
             </div>
           )}

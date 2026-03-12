@@ -128,11 +128,17 @@ export class InvoicePipelineService {
         () => this.documentTypeService.detect(fileBuffer, inspectionResult.fileType),
       );
 
-      // ── Stage 3: text_extraction (text-based PDFs only) ──────────────────
+      // ── Stage 3: text_extraction ──────────────────────────────────────────
+      // Run for ALL PDFs, not just text-based ones.  Modern PDFs store text in
+      // FlateDecode-compressed streams — invisible to the raw-byte classifier
+      // in DocumentTypeDetectionService but fully decodable by pdfjs
+      // getTextContent().  Running here means a PDF wrongly classified as
+      // "scanned" still yields usable text for AI extraction.
+      // For images there is no text layer, so the stage is skipped.
       currentStage = 'text_extraction';
       let textExtractionResult: PdfTextExtractionResultDto | null = null;
 
-      if (documentTypeResult.documentType === 'text-based-pdf') {
+      if (inspectionResult.fileType === 'pdf') {
         textExtractionResult = await runStage(
           'text_extraction',
           () => this.pdfTextExtractionService.extract(fileBuffer),
@@ -145,10 +151,17 @@ export class InvoicePipelineService {
       }
 
       // ── Stage 4: ocr (scanned PDFs and images only) ──────────────────────
+      // Skip OCR when text extraction already yielded sufficient text — this
+      // avoids the expensive canvas-render + Tesseract path for PDFs whose
+      // text is in compressed streams but was correctly recovered above.
       currentStage = 'ocr';
       let ocrResult: OcrResultDto | null = null;
 
-      if (documentTypeResult.documentType === 'scanned-pdf') {
+      const textExtractionChars = textExtractionResult?.extractedCharacterCount ?? 0;
+      const needsOcr =
+        documentTypeResult.documentType === 'scanned-pdf' && textExtractionChars < 50;
+
+      if (needsOcr) {
         ocrResult = await runStage(
           'ocr',
           () => this.ocrService.recognizeScannedPdf(fileBuffer),
@@ -163,6 +176,10 @@ export class InvoicePipelineService {
       } else {
         await skipStage('ocr', {
           documentType: documentTypeResult.documentType,
+          reason:
+            documentTypeResult.documentType === 'scanned-pdf'
+              ? 'text extraction recovered sufficient text'
+              : undefined,
         });
       }
 

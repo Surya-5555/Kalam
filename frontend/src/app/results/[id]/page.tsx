@@ -15,9 +15,36 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   getInvoiceResults,
   InvoiceDocument,
-  AiExtractionResult,
   NormalizedInvoice,
 } from "@/lib/api/invoice";
+
+// ─── Actual shape stored in InvoiceDocument.extractedData ────────────────────
+// The backend persists a PipelineRunResult (not AiExtractionResult) as JSON.
+// This interface mirrors the fields we actually read.
+
+interface StoredMetadata {
+  extractionMethod: string | null;
+  extractionModel: string | null;
+  overallConfidence: number;
+  sourceTextLength: number;
+  schemaRepairs: Array<{ field: string; severity: string; detail: string }>;
+}
+
+interface StoredValidation {
+  isValid: boolean;
+  errors: Array<{ code: string; severity: string; field: string | null; message: string; expected?: string; actual?: string }>;
+  warnings: Array<{ code: string; severity: string; field: string | null; message: string }>;
+  rulesRun: number;
+  rulesPassed: number;
+}
+
+interface StoredPipelineResult {
+  status: "completed" | "partial" | "failed";
+  invoice: NormalizedInvoice | null;
+  validation: StoredValidation | null;
+  warnings: Array<{ code: string; message: string; field?: string | null; details?: string | null }>;
+  metadata: StoredMetadata | null;
+}
 
 import { PartySection } from "@/components/invoice-results/party-section";
 import { HeaderSection } from "@/components/invoice-results/header-section";
@@ -94,8 +121,8 @@ function DocumentMetaCard({ doc }: { doc: InvoiceDocument }) {
 
 // ── Left panel: extraction quality card ──────────────────────────────────────
 
-function ExtractionQualityCard({ data }: { data: AiExtractionResult }) {
-  const pct = Math.round(data.overallConfidence * 100);
+function ExtractionQualityCard({ data }: { data: StoredPipelineResult }) {
+  const pct = Math.round((data.metadata?.overallConfidence ?? 0) * 100);
   const color =
     pct >= 85
       ? "text-emerald-600"
@@ -121,14 +148,14 @@ function ExtractionQualityCard({ data }: { data: AiExtractionResult }) {
         </span>
         <span
           className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-            data.status === "success"
+            data.status === "completed"
               ? "bg-emerald-100 text-emerald-700"
               : data.status === "partial"
                 ? "bg-amber-100 text-amber-700"
                 : "bg-rose-100 text-rose-700"
           }`}
         >
-          {data.status}
+          {data.status === "completed" ? "success" : data.status}
         </span>
       </div>
 
@@ -143,19 +170,19 @@ function ExtractionQualityCard({ data }: { data: AiExtractionResult }) {
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500">Model</span>
           <span className="text-slate-700 font-mono text-[11px]">
-            {data.extractionModel}
+            {data.metadata?.extractionModel ?? "—"}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500">Source method</span>
           <span className="text-slate-700 font-mono text-[11px]">
-            {data.sourceTextMethod}
+            {data.metadata?.extractionMethod ?? "—"}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500">Source chars</span>
           <span className="text-slate-700 font-mono text-[11px]">
-            {data.sourceTextLength.toLocaleString()}
+            {(data.metadata?.sourceTextLength ?? 0).toLocaleString()}
           </span>
         </div>
       </div>
@@ -261,8 +288,8 @@ function InvoiceSummaryCard({ inv }: { inv: NormalizedInvoice }) {
 
 // ── Schema repairs card ───────────────────────────────────────────────────────
 
-function SchemaRepairsCard({ data }: { data: AiExtractionResult }) {
-  const repairs = data.schemaRepairs.filter((r) => r.severity !== "coerced");
+function SchemaRepairsCard({ data }: { data: StoredPipelineResult }) {
+  const repairs = (data.metadata?.schemaRepairs ?? []).filter((r) => r.severity !== "coerced");
   if (repairs.length === 0) return null;
 
   return (
@@ -392,8 +419,8 @@ export default function ResultsPage() {
     );
   }
 
-  const extracted = doc.extractedData as AiExtractionResult | null;
-  const inv: NormalizedInvoice | null = extracted?.normalizedInvoice ?? null;
+  const extracted = doc.extractedData as StoredPipelineResult | null;
+  const inv: NormalizedInvoice | null = extracted?.invoice ?? null;
   const currency = inv?.invoice.currency ?? null;
 
   return (
@@ -451,25 +478,25 @@ export default function ResultsPage() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
                 <span className="flex items-center gap-1.5 text-sm text-slate-500">
                   <Zap className="h-3.5 w-3.5" />
-                  {Math.round(extracted.overallConfidence * 100)}% confidence
+                  {Math.round((extracted.metadata?.overallConfidence ?? 0) * 100)}% confidence
                 </span>
-                {extracted.businessValidation && (
+                {extracted.validation && (
                   <span
                     className={`flex items-center gap-1.5 text-sm font-medium ${
-                      extracted.businessValidation.isValid
+                      extracted.validation.isValid
                         ? "text-emerald-600"
                         : "text-rose-600"
                     }`}
                   >
-                    {extracted.businessValidation.isValid ? (
+                    {extracted.validation.isValid ? (
                       <CheckCircle2 className="h-3.5 w-3.5" />
                     ) : (
                       <AlertCircle className="h-3.5 w-3.5" />
                     )}
-                    {extracted.businessValidation.isValid
+                    {extracted.validation.isValid
                       ? "Passed validation"
-                      : `${extracted.businessValidation.errors.length} validation issue${
-                          extracted.businessValidation.errors.length !== 1 ? "s" : ""
+                      : `${extracted.validation.errors.length} validation issue${
+                          extracted.validation.errors.length !== 1 ? "s" : ""
                         }`}
                   </span>
                 )}
@@ -477,7 +504,7 @@ export default function ResultsPage() {
               {inv && (
                 <ExportActions
                   normalizedInvoice={inv}
-                  businessValidation={extracted.businessValidation}
+                  businessValidation={extracted.validation as any}
                   originalName={doc.originalName}
                 />
               )}
@@ -499,7 +526,7 @@ export default function ResultsPage() {
               <DocumentMetaCard doc={doc} />
               {inv && <InvoiceSummaryCard inv={inv} />}
               <ExtractionQualityCard data={extracted} />
-              {extracted.schemaRepairs.length > 0 && (
+              {(extracted.metadata?.schemaRepairs ?? []).length > 0 && (
                 <SchemaRepairsCard data={extracted} />
               )}
             </div>
@@ -532,15 +559,15 @@ export default function ResultsPage() {
                   <TotalsSection totals={inv.totals} currency={currency} />
 
                   {/* Validation */}
-                  {extracted.businessValidation && (
+                  {extracted.validation && (
                     <ValidationSection
-                      validation={extracted.businessValidation}
+                      validation={extracted.validation as any}
                     />
                   )}
 
                   {/* Pipeline warnings */}
                   {extracted.warnings.length > 0 && (
-                    <WarningsPanel warnings={extracted.warnings} />
+                    <WarningsPanel warnings={extracted.warnings as any} />
                   )}
 
                   {/* Raw JSON */}
@@ -549,13 +576,13 @@ export default function ResultsPage() {
               ) : (
                 <>
                   {/* No normalizedInvoice — show validation + warnings + raw only */}
-                  {extracted.businessValidation && (
+                  {extracted.validation && (
                     <ValidationSection
-                      validation={extracted.businessValidation}
+                      validation={extracted.validation as any}
                     />
                   )}
                   {extracted.warnings.length > 0 && (
-                    <WarningsPanel warnings={extracted.warnings} />
+                    <WarningsPanel warnings={extracted.warnings as any} />
                   )}
                   <RawJsonSection data={extracted} />
                 </>

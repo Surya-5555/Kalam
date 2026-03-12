@@ -28,11 +28,23 @@ const MIN_PAGE_CHARS = 5;
  */
 const PDF_RENDER_SCALE = 2.5;
 
+/**
+ * Maximum number of pages to OCR in a single document.
+ * Pages beyond this limit are skipped to prevent unbounded runtimes.
+ */
+const MAX_OCR_PAGES = 20;
+
+/** Maximum time (ms) allowed for a single page's Tesseract recognition. */
+const PER_PAGE_TIMEOUT_MS = 45_000;
+
+/** Overall timeout (ms) for the entire OCR operation (all pages). */
+const OVERALL_OCR_TIMEOUT_MS = 120_000;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PdfjsLib {
   GlobalWorkerOptions: { workerSrc: string; workerPort: any };
-  getDocument(params: { data: Uint8Array }): { promise: Promise<PdfjsDocument> };
+  getDocument(params: { data: Uint8Array; standardFontDataUrl?: string }): { promise: Promise<PdfjsDocument> };
 }
 
 interface PdfjsDocument {
@@ -95,8 +107,30 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
       const Tesseract = await import('tesseract.js');
       const createWorker = Tesseract.default?.createWorker ?? Tesseract.createWorker;
 
+      const tessdataPath = path.join(process.cwd(), 'tessdata');
+
+      // Ensure the cache directory exists so Tesseract can write tessdata on
+      // first run without silently failing mid-recognition.
+      const fs = await import('fs');
+      if (!fs.existsSync(tessdataPath)) {
+        fs.mkdirSync(tessdataPath, { recursive: true });
+        this.logger.log(
+          `tessdata cache dir created at ${tessdataPath} — eng.traineddata will be downloaded on first use (~10 MB)`,
+        );
+      } else {
+        const hasTrainedData = fs
+          .readdirSync(tessdataPath)
+          .some((f: string) => f.endsWith('.traineddata'));
+        if (!hasTrainedData) {
+          this.logger.warn(
+            `tessdata dir exists but English traineddata not found — will download on first OCR call (~10 MB). ` +
+            `First OCR job will be slow. Re-start the server after the first successful OCR to get cached data.`,
+          );
+        }
+      }
+
       this.tesseractWorker = await createWorker(['eng'], 1, {
-        cachePath: path.join(process.cwd(), 'tessdata'),
+        cachePath: tessdataPath,
         logger: () => undefined, // silence per-progress events
       });
 
@@ -120,7 +154,10 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
   /** Run OCR on a JPEG/PNG image buffer. */
   async recognizeImage(buffer: Buffer): Promise<OcrResultDto> {
     const preprocessed = await this.preprocessImage(buffer);
-    const { text, confidence } = await this.runTesseract(preprocessed);
+    const { text, confidence } = await this.runTesseractWithTimeout(
+      preprocessed,
+      PER_PAGE_TIMEOUT_MS,
+    );
 
     const cleaned = this.cleanText(text);
     const page: OcrPageResultDto = {
@@ -135,21 +172,42 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
 
   /** Render each page of a scanned PDF and run OCR over the resulting images. */
   async recognizeScannedPdf(buffer: Buffer): Promise<OcrResultDto> {
+    return this.withOverallTimeout(
+      () => this.doRecognizeScannedPdf(buffer),
+      OVERALL_OCR_TIMEOUT_MS,
+    );
+  }
+
+  private async doRecognizeScannedPdf(buffer: Buffer): Promise<OcrResultDto> {
     const pdfjs = await this.loadPdfjs();
     let doc: PdfjsDocument | null = null;
 
     try {
-      doc = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+      doc = await pdfjs.getDocument({
+        data: new Uint8Array(buffer),
+        standardFontDataUrl: this.standardFontDataUrl,
+      }).promise;
       const totalPages = doc.numPages;
+      const cappedPages = Math.min(totalPages, MAX_OCR_PAGES);
+
+      if (totalPages > MAX_OCR_PAGES) {
+        this.logger.warn(
+          `PDF has ${totalPages} pages; capping OCR at ${MAX_OCR_PAGES} pages`,
+        );
+      }
+
       const pages: OcrPageResultDto[] = [];
       let hadPartialFailure = false;
 
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+      for (let pageNum = 1; pageNum <= cappedPages; pageNum++) {
         try {
           const page = await doc.getPage(pageNum);
           const imageBuffer = await this.renderPdfPage(page);
           const preprocessed = await this.preprocessImage(imageBuffer);
-          const { text, confidence } = await this.runTesseract(preprocessed);
+          const { text, confidence } = await this.runTesseractWithTimeout(
+            preprocessed,
+            PER_PAGE_TIMEOUT_MS,
+          );
           const cleaned = this.cleanText(text);
 
           pages.push({
@@ -160,7 +218,7 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
           });
 
           this.logger.debug(
-            `Page ${pageNum}/${totalPages}: ${cleaned.length} chars, confidence ${confidence.toFixed(1)}`,
+            `Page ${pageNum}/${cappedPages}: ${cleaned.length} chars, confidence ${confidence.toFixed(1)}`,
           );
         } catch (pageErr: any) {
           this.logger.warn(`OCR failed on page ${pageNum}: ${pageErr?.message}`);
@@ -274,6 +332,76 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Wraps runTesseract with a per-call timeout.
+   * If Tesseract hangs (e.g. on first-run tessdata download stall), the
+   * promise rejects after `timeoutMs` so the page can be marked as failed
+   * rather than blocking the whole pipeline.
+   */
+  private async runTesseractWithTimeout(
+    imageBuffer: Buffer,
+    timeoutMs: number,
+  ): Promise<{ text: string; confidence: number }> {
+    return this.withTimeout(
+      () => this.runTesseract(imageBuffer),
+      timeoutMs,
+      `Tesseract recognition timed out after ${timeoutMs / 1000}s`,
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Timeout helpers
+  // ──────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Races a factory-produced promise against a rejection timeout.
+   * On timeout the error message is thrown so callers can handle gracefully.
+   */
+  private withTimeout<T>(
+    fn: () => Promise<T>,
+    timeoutMs: number,
+    message: string,
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error(message)),
+        timeoutMs,
+      );
+
+      fn().then(
+        (value) => { clearTimeout(timer); resolve(value); },
+        (err)   => { clearTimeout(timer); reject(err); },
+      );
+    });
+  }
+
+  /**
+   * Wraps the entire OCR operation with an overall timeout.
+   * On timeout, returns a failed result with hadPartialFailure=true rather
+   * than propagating an exception, so the pipeline can continue.
+   */
+  private async withOverallTimeout(
+    fn: () => Promise<OcrResultDto>,
+    timeoutMs: number,
+  ): Promise<OcrResultDto> {
+    try {
+      return await this.withTimeout(fn, timeoutMs, `OCR timed out after ${timeoutMs / 1000}s`);
+    } catch (err: any) {
+      this.logger.error(`OCR overall timeout or failure: ${err?.message}`);
+      const fallback: OcrResultDto = {
+        fullText: '',
+        pages: [],
+        totalPages: 0,
+        extractedCharacterCount: 0,
+        averageConfidence: 0,
+        extractionMethod: 'ocr',
+        hadLowConfidence: true,
+        hadPartialFailure: true,
+      };
+      return fallback;
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Text cleaning
   // ──────────────────────────────────────────────────────────────────────────
@@ -341,6 +469,14 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
   // ──────────────────────────────────────────────────────────────────────────
   // pdfjs loader (lazy, cached)
   // ──────────────────────────────────────────────────────────────────────────
+
+  /** Resolves the file:// URL for pdfjs-dist's standard font data directory. */
+  private get standardFontDataUrl(): string {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fontsDir: string = require.resolve('pdfjs-dist/standard_fonts/FoxitFixed.pfb')
+      .replace(/FoxitFixed\.pfb$/, '');
+    return pathToFileURL(fontsDir).href;
+  }
 
   private async loadPdfjs(): Promise<PdfjsLib> {
     if (this.pdfjsLib) return this.pdfjsLib;

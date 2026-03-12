@@ -206,11 +206,7 @@ export interface ParseResult {
  * @throws {Error} if the response cannot be parsed as valid JSON.
  */
 export function parseExtractionResponse(rawResponse: string): ParseResult {
-  // Strip optional markdown code fences (```json ... ``` or ``` ... ```)
-  let cleaned = rawResponse.trim();
-  cleaned = cleaned
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```\s*$/, '');
+  const cleaned = sanitizeResponse(rawResponse);
 
   let parsed: Record<string, unknown>;
   try {
@@ -238,4 +234,44 @@ export function parseExtractionResponse(rawResponse: string): ParseResult {
 
   const overallConfidence = computeOverallConfidence(invoice);
   return { invoice, overallConfidence, warnings };
+}
+
+/**
+ * Robustly extracts a JSON object from an LLM response that may contain:
+ *  - Markdown code fences (```json … ``` or ``` … ```)
+ *  - Preamble / postamble text ("Here is the result:" … "Hope this helps!")
+ *  - A bare JSON object with no fences
+ *  - Trailing commas before } or ] (loose JSON from some model checkpoints)
+ *  - JavaScript-style comments (// … or /* … *‌/)
+ *
+ * Strategy:
+ *  1. Strip markdown fences anywhere in the string.
+ *  2. Find the first `{` and last `}` — extract that substring.
+ *  3. Strip JS comments and trailing commas so JSON.parse doesn't reject them.
+ */
+function sanitizeResponse(raw: string): string {
+  let s = raw.trim();
+
+  // 1. Remove all markdown code fences (```json, ```JSON, ```, etc.)
+  s = s.replace(/```(?:json|JSON)?\s*/g, '').replace(/```/g, '');
+
+  // 2. Locate the outermost JSON object boundaries
+  const start = s.indexOf('{');
+  const end   = s.lastIndexOf('}');
+
+  if (start !== -1 && end !== -1 && end > start) {
+    s = s.slice(start, end + 1);
+  }
+
+  // 3. Strip single-line JS comments (// …) that some models emit
+  s = s.replace(/\/\/[^\n]*/g, '');
+
+  // 4. Strip block comments (/* … */)
+  s = s.replace(/\/\*[\s\S]*?\*\//g, '');
+
+  // 5. Remove trailing commas before } or ] — invalid in JSON but common in
+  //    LLM output (e.g. last item in an array followed by a comma)
+  s = s.replace(/,(\s*[}\]])/g, '$1');
+
+  return s.trim();
 }

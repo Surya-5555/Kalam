@@ -10,7 +10,7 @@ import {
 /** Minimal shape of the pdfjs-dist module we actually use. */
 interface PdfjsLib {
   GlobalWorkerOptions: { workerSrc: string };
-  getDocument(params: { data: Uint8Array }): { promise: Promise<PdfjsDocument> };
+  getDocument(params: { data: Uint8Array; standardFontDataUrl?: string }): { promise: Promise<PdfjsDocument> };
 }
 
 interface PdfjsDocument {
@@ -60,6 +60,15 @@ export class PdfTextExtractionService {
   /** Cached pdfjs module reference (loaded on first use via dynamic import). */
   private pdfjsLib: PdfjsLib | null = null;
 
+  /** file:// URL to pdfjs-dist standard font data directory (computed once). */
+  private get standardFontDataUrl(): string {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const fontsDir: string = require.resolve('pdfjs-dist/standard_fonts/FoxitFixed.pfb')
+      .replace(/FoxitFixed\.pfb$/, '');
+    const { pathToFileURL } = require('url');
+    return pathToFileURL(fontsDir).href;
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Public API
   // ──────────────────────────────────────────────────────────────────────────
@@ -69,7 +78,11 @@ export class PdfTextExtractionService {
 
     try {
       const pdfjs = await this.loadPdfjs();
-      doc = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
+
+      doc = await pdfjs.getDocument({
+        data: new Uint8Array(buffer),
+        standardFontDataUrl: this.standardFontDataUrl,
+      }).promise;
 
       const totalPages = doc.numPages;
       const pages: PageTextDto[] = [];

@@ -112,7 +112,11 @@ export default function DashboardPage() {
           ) : invoices.length > 0 ? (
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
               {invoices.map((invoice) => (
-                <InvoiceCard key={invoice.id} invoice={invoice} />
+                <InvoiceCard
+                  key={invoice.id}
+                  invoice={invoice}
+                  onClick={() => router.push(`/results/${invoice.id}`)}
+                />
               ))}
             </div>
           ) : (

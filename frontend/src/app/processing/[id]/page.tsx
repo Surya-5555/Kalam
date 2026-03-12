@@ -279,7 +279,7 @@ export default function ProcessingPage() {
           <li key={rec.stage} className="relative flex items-start gap-3">
             {/* Connector line */}
             {!isLast && (
-              <span className="absolute left-[9px] top-6 h-full w-px bg-slate-100" />
+              <span className="absolute left-2.25 top-6 h-full w-px bg-slate-100" />
             )}
             <StageIcon status={rec.status} />
             <div className="flex-1 pb-1">
@@ -444,9 +444,15 @@ export default function ProcessingPage() {
                 <div className="mt-6 flex gap-3">
                   <Button
                     className="flex-1 bg-slate-900 text-white hover:bg-slate-800"
+                    onClick={() => router.push(`/results/${documentId}`)}
+                  >
+                    View Full Results →
+                  </Button>
+                  <Button
+                    variant="outline"
                     onClick={() => router.push("/dashboard")}
                   >
-                    Back to Dashboard
+                    Dashboard
                   </Button>
                 </div>
               </>

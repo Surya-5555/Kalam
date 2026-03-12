@@ -1,5 +1,7 @@
-import { Controller, Post, Get, Param, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, HttpCode, HttpStatus, Query, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Param, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, HttpCode, HttpStatus, Query, Logger, StreamableFile, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { createReadStream } from 'fs';
 import { InvoiceService } from './invoice.service';
 import { ProcessingStatusService } from '../processing-status/processing-status.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
@@ -41,8 +43,23 @@ export class InvoiceController {
     return this.invoiceService.getRecentDocuments(userId, limit ? Number(limit) : 10);
   }
 
-  // NOTE: :id/status must be defined before :id so NestJS/Express does not
-  // try to match 'status' as a document id.
+  // NOTE: :id/file and :id/status must be defined before :id so NestJS/Express
+  // does not try to match those sub-paths as a bare document id.
+  @Get(':id/file')
+  async serveInvoiceFile(
+    @Param('id') id: string,
+    @GetUser('id') userId: number,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const { filePath, mimeType } = await this.invoiceService.getDocumentFilePath(id, userId);
+    res.set({
+      'Content-Type': mimeType,
+      'Content-Disposition': 'inline',
+      'Cache-Control': 'private, no-store',
+    });
+    return new StreamableFile(createReadStream(filePath));
+  }
+
   @Get(':id/status')
   async getProcessingStatus(
     @Param('id') id: string,

@@ -505,6 +505,13 @@ export interface ProcessingStatusResponse {
   extractedData: AiExtractionResult | null;
 }
 
+export async function getInvoiceResults(
+  id: string,
+): Promise<InvoiceDocument & { extractedData: AiExtractionResult | null }> {
+  const doc = await getInvoiceById(id, '');
+  return doc as InvoiceDocument & { extractedData: AiExtractionResult | null };
+}
+
 export async function getProcessingStatus(
   documentId: string,
 ): Promise<ProcessingStatusResponse> {

@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { UploadCloud, FileType, CheckCircle, AlertCircle, X, File } from "lucide-react";
+import { UploadCloud, FileText, X, Loader2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
-
 import { apiFetch } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
   onUploadSuccess: (documentId: string, filename: string) => void;
   onUploadError: (error: string) => void;
 }
 
+const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
+const FORMAT_LABELS = ["PDF", "JPG", "PNG"];
+
 export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) {
-  useAuth(); // keep context subscription for re-renders on auth changes
+  useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,13 +35,12 @@ export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) 
   }, []);
 
   const validateFile = (selectedFile: File) => {
-    const validTypes = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
-    if (!validTypes.includes(selectedFile.type)) {
+    if (!ACCEPTED_TYPES.includes(selectedFile.type)) {
       onUploadError("Invalid file type. Please upload a PDF, JPG, or PNG.");
       return false;
     }
     if (selectedFile.size > 10 * 1024 * 1024) {
-      onUploadError("File size exceeds the 10MB limit.");
+      onUploadError("File size exceeds the 10 MB limit.");
       return false;
     }
     return true;
@@ -48,151 +50,171 @@ export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) 
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const droppedFile = e.dataTransfer.files[0];
-      if (validateFile(droppedFile)) {
-        setFile(droppedFile);
-      }
-    }
+    const dropped = e.dataTransfer.files[0];
+    if (dropped && validateFile(dropped)) setFile(dropped);
   }, [onUploadError]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFile = e.target.files[0];
-      if (validateFile(selectedFile)) {
-        setFile(selectedFile);
-      }
-    }
+    const selected = e.target.files?.[0];
+    if (selected && validateFile(selected)) setFile(selected);
   };
 
   const removeFile = () => {
     setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const uploadFile = async () => {
     if (!file) return;
-
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const response = await apiFetch('/invoice/upload', {
-        method: "POST",
-        body: formData,
-      });
+      const response = await apiFetch("/invoice/upload", { method: "POST", body: formData });
 
       if (!response || !response.ok) {
         let errMessage = "Upload failed";
         try {
           const errData = await response?.json();
-          // NestJS wraps nested exception bodies under the `message` key when
-          // they are plain strings, but passes objects through directly.
-          if (typeof errData.message === 'string') {
-            errMessage = errData.message;
-          } else if (Array.isArray(errData.message)) {
-            errMessage = errData.message.join(' ');
-          }
-        } catch {
-          // ignore JSON parse errors
-        }
+          if (typeof errData.message === "string") errMessage = errData.message;
+          else if (Array.isArray(errData.message)) errMessage = errData.message.join(" ");
+        } catch { /* ignore */ }
         throw new Error(errMessage);
       }
 
       const data = await response.json();
       onUploadSuccess(data.documentId as string, file.name);
       setFile(null);
-    } catch (error: any) {
-      onUploadError(error.message || "An unexpected error occurred during upload.");
+    } catch (error: unknown) {
+      onUploadError(error instanceof Error ? error.message : "An unexpected error occurred.");
     } finally {
       setIsUploading(false);
     }
   };
 
-  return (
-    <div className="w-full max-w-2xl mx-auto">
-      {!file ? (
-        <div
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-colors duration-200 group
-            ${isDragging
-              ? "border-black bg-slate-50"
-              : "border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50"
-            }
-          `}
-        >
-          <input
-            type="file"
-            className="hidden"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept=".pdf, image/jpeg, image/png, image/jpg"
+  if (!file) {
+    return (
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={cn(
+          "relative w-full cursor-pointer rounded-2xl border-2 border-dashed px-8 py-14 text-center transition-all duration-200 select-none",
+          isDragging
+            ? "border-slate-900 bg-slate-50"
+            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60",
+        )}
+      >
+        <input
+          type="file"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".pdf,image/jpeg,image/png,image/jpg"
+        />
+
+        {/* Icon */}
+        <div className="mx-auto mb-5 flex w-fit items-center justify-center rounded-xl bg-slate-100 p-4 transition-colors duration-200">
+          <UploadCloud
+            className={cn(
+              "h-7 w-7 transition-colors duration-200",
+              isDragging ? "text-slate-900" : "text-slate-400",
+            )}
           />
-          <div className="flex justify-center mb-6">
-            <div className={`p-5 rounded-full transition-colors duration-200
-              ${isDragging ? "bg-slate-200 text-black" : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-900"}
-              `}>
-               <UploadCloud className="w-10 h-10" />
-            </div>
-          </div>
-          <h3 className="text-xl font-bold text-black mb-2">
-            Click or drag and drop to upload
-          </h3>
-          <p className="text-sm text-slate-600 max-w-xs mx-auto mb-8 font-medium">
-            Upload your supplier invoices. Supports PDF, JPG, and PNG up to 10MB.
+        </div>
+
+        {/* Copy */}
+        <p className="mb-1 text-base font-semibold text-slate-900">
+          {isDragging ? "Release to upload" : "Drop your invoice here"}
+        </p>
+        <p className="text-sm text-slate-500">
+          or{" "}
+          <span className="font-medium text-slate-900 underline underline-offset-2">
+            click to browse
+          </span>
+        </p>
+
+        {/* Format pills */}
+        <div className="mt-6 flex items-center justify-center gap-2">
+          {FORMAT_LABELS.map((fmt) => (
+            <span
+              key={fmt}
+              className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500"
+            >
+              {fmt}
+            </span>
+          ))}
+          <span className="text-xs text-slate-400">· max 10 MB</span>
+        </div>
+      </div>
+    );
+  }
+
+  // File selected state
+  const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+  const fileType = file.type || "Unknown";
+
+  return (
+    <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white">
+      {/* File row */}
+      <div className="flex items-center gap-4 border-b border-slate-100 px-5 py-4">
+        <div className="shrink-0 rounded-xl bg-slate-100 p-3">
+          <FileText className="h-5 w-5 text-slate-600" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-sm font-semibold text-slate-900"
+            title={file.name}
+          >
+            {file.name}
           </p>
-          <Button type="button" className="rounded-full bg-black hover:bg-slate-800 text-white border-0 px-8 font-semibold shadow-none pointer-events-none">
-            Select File
-          </Button>
+          <p className="mt-0.5 text-xs text-slate-400">
+            {fileSizeMB} MB &middot; {fileType}
+          </p>
         </div>
-      ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 overflow-hidden">
-          <div className="flex items-center justify-between mb-6 pb-6 border-b border-slate-100">
-             <div className="flex items-center space-x-4 overflow-hidden">
-               <div className="p-3 bg-slate-100 text-slate-900 rounded-xl flex-shrink-0">
-                 <File className="w-6 h-6" />
-               </div>
-               <div className="overflow-hidden">
-                 <h4 className="font-semibold text-black truncate pr-4" title={file.name}>{file.name}</h4>
-                 <p className="text-sm font-medium text-slate-500 mt-0.5">{(file.size / (1024 * 1024)).toFixed(2)} MB • {file.type || 'Unknown Type'}</p>
-               </div>
-             </div>
-             <button
-                onClick={removeFile}
-                disabled={isUploading}
-                className="p-2 text-slate-500 hover:text-black hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50"
-             >
-               <X className="w-5 h-5" />
-             </button>
-          </div>
-          
-          <div className="flex justify-end space-x-3">
-             <Button type="button" variant="outline" className="rounded-full font-medium text-black bg-white border-slate-300 hover:bg-slate-50" onClick={removeFile} disabled={isUploading}>
-               Cancel
-             </Button>
-             <Button type="button" className="rounded-full bg-black hover:bg-slate-800 text-white border-0 shadow-none font-semibold" onClick={uploadFile} disabled={isUploading}>
-               {isUploading ? (
-                 <>
-                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                   Uploading...
-                 </>
-               ) : (
-                 <>
-                   Upload Invoice
-                   <CheckCircle className="w-4 h-4 ml-2" />
-                 </>
-               )}
-             </Button>
-          </div>
-        </div>
-      )}
+        <button
+          type="button"
+          onClick={removeFile}
+          disabled={isUploading}
+          className="shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40"
+          aria-label="Remove file"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3 bg-slate-50/60 px-5 py-3.5">
+        <Button
+          type="button"
+          variant="ghost"
+          className="h-9 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+          onClick={removeFile}
+          disabled={isUploading}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="button"
+          className="h-9 gap-2 rounded-lg bg-slate-900 px-5 text-sm font-semibold text-white shadow-none hover:bg-slate-800 disabled:opacity-60"
+          onClick={uploadFile}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Uploading…
+            </>
+          ) : (
+            <>
+              Upload Invoice
+              <ArrowRight className="h-3.5 w-3.5" />
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 }

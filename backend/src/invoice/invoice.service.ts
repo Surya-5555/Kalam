@@ -364,4 +364,43 @@ export class InvoiceService {
 
     return document;
   }
+
+  async getDocumentFilePath(
+    id: string,
+    userId: number,
+  ): Promise<{ filePath: string; mimeType: string }> {
+    const document = await this.prisma.invoiceDocument.findFirst({
+      where: { id, userId },
+      select: { storedName: true, mimeType: true },
+    });
+
+    if (!document) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // Path-traversal guard: storedName is always a UUID+extension written by
+    // processUpload, but we validate defensively so user-controlled input
+    // (the :id param) can never escape the upload directory.
+    const safeName = path.basename(document.storedName);
+    if (safeName !== document.storedName) {
+      this.logger.warn(`Suspicious storedName detected for document ${id}`);
+      throw new NotFoundException('Document not found');
+    }
+
+    const filePath = path.join(this.uploadDir, safeName);
+    const resolvedFile = path.resolve(filePath);
+    const resolvedDir = path.resolve(this.uploadDir);
+
+    // Ensure the resolved path stays inside the upload directory.
+    if (!resolvedFile.startsWith(resolvedDir + path.sep)) {
+      this.logger.warn(`Path traversal attempt for document ${id}`);
+      throw new NotFoundException('Document not found');
+    }
+
+    if (!fs.existsSync(filePath)) {
+      throw new NotFoundException('File not found on disk');
+    }
+
+    return { filePath, mimeType: document.mimeType };
+  }
 }

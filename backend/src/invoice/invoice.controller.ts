@@ -1,6 +1,7 @@
 import { Controller, Post, Get, Param, UseGuards, UseInterceptors, UploadedFile, ParseFilePipe, MaxFileSizeValidator, FileTypeValidator, HttpCode, HttpStatus, Query, Logger } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { InvoiceService } from './invoice.service';
+import { ProcessingStatusService } from '../processing-status/processing-status.service';
 import { JwtAuthGuard } from '../auth/guard/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 
@@ -8,7 +9,10 @@ import { GetUser } from '../auth/decorators/get-user.decorator';
 @UseGuards(JwtAuthGuard) // Protect all endpoints
 export class InvoiceController {
   private readonly logger = new Logger(InvoiceController.name);
-  constructor(private readonly invoiceService: InvoiceService) {}
+  constructor(
+    private readonly invoiceService: InvoiceService,
+    private readonly processingStatusService: ProcessingStatusService,
+  ) {}
 
   @Post('upload')
   @HttpCode(HttpStatus.OK)
@@ -35,6 +39,16 @@ export class InvoiceController {
   ) {
     this.logger.log(`Fetching recent invoices for user: ${userId}, limit: ${limit}`);
     return this.invoiceService.getRecentDocuments(userId, limit ? Number(limit) : 10);
+  }
+
+  // NOTE: :id/status must be defined before :id so NestJS/Express does not
+  // try to match 'status' as a document id.
+  @Get(':id/status')
+  async getProcessingStatus(
+    @Param('id') id: string,
+    @GetUser('id') userId: number,
+  ) {
+    return this.processingStatusService.getStatus(id, userId);
   }
 
   @Get(':id')

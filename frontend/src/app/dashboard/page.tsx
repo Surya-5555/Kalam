@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { LogOut, FileText, CheckCircle2, Loader2 } from "lucide-react";
+import { LogOut, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
 import { InvoiceDocument, getRecentInvoices } from "@/lib/api/invoice";
@@ -14,7 +14,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<InvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [uploadStatus, setUploadStatus] = useState<{status: 'idle' | 'success' | 'error', message?: string, docId?: string, qualityWarnings?: string[]}>({ status: 'idle' });
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fetchInvoices = useCallback(async () => {
     if (!accessToken) return;
@@ -44,22 +44,12 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  const onUploadSuccess = (documentId: string, filename: string, qualityWarnings: string[]) => {
-    setUploadStatus({
-      status: 'success',
-      message: `Successfully uploaded ${filename}`,
-      docId: documentId,
-      qualityWarnings,
-    });
-    // Refresh the list
-    fetchInvoices();
+  const onUploadSuccess = (documentId: string) => {
+    router.push(`/processing/${documentId}`);
   };
 
   const onUploadError = (error: string) => {
-    setUploadStatus({
-      status: 'error',
-      message: error
-    });
+    setUploadError(error);
   };
 
   return (
@@ -85,49 +75,19 @@ export default function DashboardPage() {
           <p className="text-slate-600 font-medium">Upload your supplier invoices for automatic data extraction.</p>
         </div>
 
-        {uploadStatus.status === 'success' && (
-           <div className="mb-8 space-y-3">
-             <div className="p-4 bg-white border border-slate-200 rounded-2xl flex items-start sm:items-center space-x-3 text-slate-900 shadow-sm">
-               <CheckCircle2 className="w-5 h-5 text-emerald-600 mt-0.5 sm:mt-0 flex-shrink-0" />
-               <div>
-                 <p className="font-semibold text-sm">{uploadStatus.message}</p>
-               </div>
-               <Button variant="outline" className="ml-auto bg-white border-slate-200 hover:bg-slate-50 text-black rounded-full text-xs shadow-none h-8 font-medium" onClick={() => setUploadStatus({status: 'idle'})}>
-                 Upload Another
-               </Button>
-             </div>
-             {uploadStatus.qualityWarnings && uploadStatus.qualityWarnings.length > 0 && (
-               <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                 <p className="text-xs font-bold text-amber-800 uppercase tracking-wide mb-2">Quality Warnings</p>
-                 <ul className="space-y-1">
-                   {uploadStatus.qualityWarnings.map((w, i) => (
-                     <li key={i} className="flex items-start gap-2 text-sm text-amber-900">
-                       <span className="mt-0.5 text-amber-500 shrink-0">&#9888;</span>
-                       {w}
-                     </li>
-                   ))}
-                 </ul>
-                 <p className="text-xs text-amber-700 mt-3 font-medium">This invoice has been queued for manual review before extraction proceeds.</p>
-               </div>
-             )}
-           </div>
-        )}
-
-        {uploadStatus.status === 'error' && (
-           <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center space-x-3 text-rose-900 shadow-sm">
-             <p className="font-semibold text-sm flex-1">{uploadStatus.message}</p>
-             <Button variant="ghost" className="text-rose-900 hover:bg-rose-100 rounded-full h-8 px-3 font-medium" onClick={() => setUploadStatus({status: 'idle'})}>Dismiss</Button>
-           </div>
-        )}
-
-        {uploadStatus.status !== 'success' && (
-          <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xs mb-16">
-            <FileUpload 
-              onUploadSuccess={onUploadSuccess}
-              onUploadError={onUploadError}
-            />
+        {uploadError && (
+          <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center space-x-3 text-rose-900 shadow-sm">
+            <p className="font-semibold text-sm flex-1">{uploadError}</p>
+            <Button variant="ghost" className="text-rose-900 hover:bg-rose-100 rounded-full h-8 px-3 font-medium" onClick={() => setUploadError(null)}>Dismiss</Button>
           </div>
         )}
+
+        <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-xs mb-16">
+          <FileUpload
+            onUploadSuccess={onUploadSuccess}
+            onUploadError={onUploadError}
+          />
+        </div>
 
         {/* Recent Documents Grid */}
         <div>
@@ -135,7 +95,7 @@ export default function DashboardPage() {
             <FileText className="w-5 h-5 mr-2 text-slate-400" />
             Recent Documents
           </h2>
-          
+
           {isLoading ? (
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
@@ -157,11 +117,11 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="border-2 border-slate-200 border-dashed rounded-3xl h-64 flex items-center justify-center text-slate-500 flex-col bg-white">
-               <div className="p-4 bg-slate-50 rounded-full mb-4">
-                 <FileText className="w-10 h-10 opacity-20 text-slate-900" />
-               </div>
-               <p className="text-sm font-semibold text-slate-900">No documents yet</p>
-               <p className="text-xs text-slate-500 mt-1">Upload an invoice to see it here</p>
+              <div className="p-4 bg-slate-50 rounded-full mb-4">
+                <FileText className="w-10 h-10 opacity-20 text-slate-900" />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">No documents yet</p>
+              <p className="text-xs text-slate-500 mt-1">Upload an invoice to see it here</p>
             </div>
           )}
         </div>

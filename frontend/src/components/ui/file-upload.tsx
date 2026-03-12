@@ -5,13 +5,15 @@ import { UploadCloud, FileType, CheckCircle, AlertCircle, X, File } from "lucide
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
+import { apiFetch } from "@/lib/api";
+
 interface FileUploadProps {
-  onUploadSuccess: (documentId: string, filename: string, qualityWarnings: string[]) => void;
+  onUploadSuccess: (documentId: string, filename: string) => void;
   onUploadError: (error: string) => void;
 }
 
 export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) {
-  const { accessToken } = useAuth();
+  useAuth(); // keep context subscription for re-renders on auth changes
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -79,18 +81,15 @@ export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) 
     formData.append("file", file);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/invoice/upload`, {
+      const response = await apiFetch('/invoice/upload', {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: formData,
       });
 
-      if (!response.ok) {
+      if (!response || !response.ok) {
         let errMessage = "Upload failed";
         try {
-          const errData = await response.json();
+          const errData = await response?.json();
           // NestJS wraps nested exception bodies under the `message` key when
           // they are plain strings, but passes objects through directly.
           if (typeof errData.message === 'string') {
@@ -105,8 +104,7 @@ export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) 
       }
 
       const data = await response.json();
-      const qualityWarnings: string[] = data.inspectionResult?.qualityWarnings ?? [];
-      onUploadSuccess(data.documentId, file.name, qualityWarnings);
+      onUploadSuccess(data.documentId as string, file.name);
       setFile(null);
     } catch (error: any) {
       onUploadError(error.message || "An unexpected error occurred during upload.");

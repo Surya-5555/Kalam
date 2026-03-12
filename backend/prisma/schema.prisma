@@ -90,5 +90,30 @@ model InvoiceDocument {
   uploadedAt    DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  processingJob ProcessingJob?
+
   @@index([userId])
+}
+
+// =========================
+// PROCESSING JOB TABLE
+// Per-document pipeline stage tracker.
+// Created at upload time; updated as each stage completes.
+// =========================
+model ProcessingJob {
+  id            String    @id @default(uuid())
+  documentId    String    @unique
+  document      InvoiceDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  // overall state: processing | completed | failed
+  overallStatus String    @default("processing")
+  // name of the stage currently executing or that last ran
+  currentStage  String    @default("uploaded")
+  // JSON array of StageRecord objects (see processing-status.service.ts)
+  stages        Json
+  failureReason String?
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@index([documentId])
 }

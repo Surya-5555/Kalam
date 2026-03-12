@@ -7,6 +7,12 @@ import {
   buildExtractionUserPrompt,
 } from './prompt/invoice-extraction.prompt';
 import { parseExtractionResponse } from './parser/extraction-parser';
+import {
+  computeRecoveredOverallConfidence,
+  extractInvoiceFromOcrText,
+  filterRecoveredStructureWarnings,
+  mergeRecoveredInvoice,
+} from './heuristics/ocr-fallback';
 import { validateAndRepair } from './schema/invoice-schema.validator';
 import { AiExtractionResultDto } from './dto/ai-extraction-result.dto';
 import { PdfTextExtractionResultDto } from '../pdf-text-extraction/dto/pdf-text-extraction-result.dto';
@@ -75,9 +81,19 @@ export class AiExtractionService {
       const { invoice, overallConfidence, warnings } =
         parseExtractionResponse(rawResponse);
 
+      const recoveredFromOcr = extractInvoiceFromOcrText(sourceText);
+      const mergedInvoice = mergeRecoveredInvoice(invoice, recoveredFromOcr);
+      const mergedOverallConfidence = computeRecoveredOverallConfidence(
+        mergedInvoice,
+      );
+      const filteredWarnings = filterRecoveredStructureWarnings(
+        warnings,
+        mergedInvoice,
+      );
+
       // Run the canonical schema validator / repairer
       const { canonical, isValid, repairs, warnings: schemaWarnings } =
-        validateAndRepair(invoice);
+        validateAndRepair(mergedInvoice);
 
       const normalizedInvoice = canonical
         ? this.normalizationService.normalize(canonical)
@@ -88,11 +104,11 @@ export class AiExtractionService {
         : null;
 
       const allWarnings: PipelineWarning[] = this.buildPipelineWarnings(
-        warnings,
+        filteredWarnings,
         schemaWarnings,
         ocrResult,
         normalizedInvoice,
-        overallConfidence,
+        mergedOverallConfidence,
       );
 
       if (allWarnings.length > 0) {
@@ -104,8 +120,8 @@ export class AiExtractionService {
 
       this.pipelineLogger.event('ai_extraction.complete', {
         model,
-        confidence: parseFloat(overallConfidence.toFixed(3)),
-        itemCount: invoice.lineItems.length,
+        confidence: parseFloat(mergedOverallConfidence.toFixed(3)),
+        itemCount: mergedInvoice.lineItems.length,
         schemaValid: isValid,
         repairCount: repairs.length,
         warningCount: allWarnings.length,
@@ -116,13 +132,13 @@ export class AiExtractionService {
 
       return {
         status,
-        extractedInvoice: invoice,
+        extractedInvoice: mergedInvoice,
         canonicalInvoice: canonical,
         schemaRepairs: repairs,
         normalizedInvoice,
         businessValidation,
         duplicateDetection: null,
-        overallConfidence,
+        overallConfidence: mergedOverallConfidence,
         warnings: allWarnings,
         extractionModel: model,
         extractionTimestamp: new Date().toISOString(),
@@ -231,7 +247,16 @@ export class AiExtractionService {
       });
     }
 
-    if (normalizedInvoice.supplier.gstin.raw == null) {
+    const supplierCountry = normalizedInvoice.supplier.country?.trim().toUpperCase() ?? null;
+    const buyerCountry = normalizedInvoice.buyer.country?.trim().toUpperCase() ?? null;
+    const likelyIndianInvoice =
+      supplierCountry === 'IN' ||
+      supplierCountry === 'INDIA' ||
+      buyerCountry === 'IN' ||
+      buyerCountry === 'INDIA' ||
+      normalizedInvoice.tax.regime === 'GST';
+
+    if (likelyIndianInvoice && normalizedInvoice.supplier.gstin.raw == null) {
       result.push({
         code: 'MISSING_SUPPLIER_GSTIN',
         message: 'Supplier GSTIN is absent from the invoice.',

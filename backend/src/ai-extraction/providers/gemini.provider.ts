@@ -26,6 +26,200 @@ interface GeminiResponse {
   error?: { code: number; message: string; status: string };
 }
 
+type GeminiSchema = {
+  type: 'STRING' | 'NUMBER' | 'BOOLEAN' | 'OBJECT' | 'ARRAY';
+  nullable?: boolean;
+  enum?: string[];
+  properties?: Record<string, GeminiSchema>;
+  items?: GeminiSchema;
+  required?: string[];
+};
+
+const nullableString = (): GeminiSchema => ({ type: 'STRING', nullable: true });
+const nullableNumber = (): GeminiSchema => ({ type: 'NUMBER', nullable: true });
+
+const INVOICE_EXTRACTION_RESPONSE_SCHEMA: GeminiSchema = {
+  type: 'OBJECT',
+  properties: {
+    supplier: {
+      type: 'OBJECT',
+      properties: {
+        name: nullableString(),
+        address: nullableString(),
+        city: nullableString(),
+        state: nullableString(),
+        country: nullableString(),
+        postalCode: nullableString(),
+        phone: nullableString(),
+        email: nullableString(),
+        taxId: nullableString(),
+        website: nullableString(),
+        confidence: { type: 'NUMBER' },
+      },
+      required: [
+        'name',
+        'address',
+        'city',
+        'state',
+        'country',
+        'postalCode',
+        'phone',
+        'email',
+        'taxId',
+        'website',
+        'confidence',
+      ],
+    },
+    buyer: {
+      type: 'OBJECT',
+      properties: {
+        name: nullableString(),
+        address: nullableString(),
+        city: nullableString(),
+        state: nullableString(),
+        country: nullableString(),
+        postalCode: nullableString(),
+        phone: nullableString(),
+        email: nullableString(),
+        taxId: nullableString(),
+        confidence: { type: 'NUMBER' },
+      },
+      required: [
+        'name',
+        'address',
+        'city',
+        'state',
+        'country',
+        'postalCode',
+        'phone',
+        'email',
+        'taxId',
+        'confidence',
+      ],
+    },
+    invoice: {
+      type: 'OBJECT',
+      properties: {
+        invoiceNumber: nullableString(),
+        invoiceNumberCandidates: {
+          type: 'ARRAY',
+          nullable: true,
+          items: { type: 'STRING' },
+        },
+        invoiceDate: nullableString(),
+        dueDate: nullableString(),
+        purchaseOrderNumber: nullableString(),
+        currency: nullableString(),
+        paymentTerms: nullableString(),
+        paymentTermsDays: nullableNumber(),
+        notes: nullableString(),
+        confidence: { type: 'NUMBER' },
+      },
+      required: [
+        'invoiceNumber',
+        'invoiceNumberCandidates',
+        'invoiceDate',
+        'dueDate',
+        'purchaseOrderNumber',
+        'currency',
+        'paymentTerms',
+        'paymentTermsDays',
+        'notes',
+        'confidence',
+      ],
+    },
+    lineItems: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          lineNumber: { type: 'NUMBER' },
+          description: nullableString(),
+          quantity: nullableNumber(),
+          unit: nullableString(),
+          unitPrice: nullableNumber(),
+          discount: nullableNumber(),
+          discountType: {
+            type: 'STRING',
+            nullable: true,
+            enum: ['percentage', 'fixed'],
+          },
+          subtotal: nullableNumber(),
+          taxRate: nullableNumber(),
+          taxAmount: nullableNumber(),
+          total: nullableNumber(),
+          confidence: { type: 'NUMBER' },
+        },
+        required: [
+          'lineNumber',
+          'description',
+          'quantity',
+          'unit',
+          'unitPrice',
+          'discount',
+          'discountType',
+          'subtotal',
+          'taxRate',
+          'taxAmount',
+          'total',
+          'confidence',
+        ],
+      },
+    },
+    taxBreakdown: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          taxType: nullableString(),
+          taxRate: nullableNumber(),
+          taxableAmount: nullableNumber(),
+          taxAmount: nullableNumber(),
+          confidence: { type: 'NUMBER' },
+        },
+        required: [
+          'taxType',
+          'taxRate',
+          'taxableAmount',
+          'taxAmount',
+          'confidence',
+        ],
+      },
+    },
+    totals: {
+      type: 'OBJECT',
+      properties: {
+        subtotal: nullableNumber(),
+        totalDiscount: nullableNumber(),
+        totalTax: nullableNumber(),
+        shippingAndHandling: nullableNumber(),
+        grandTotal: nullableNumber(),
+        amountPaid: nullableNumber(),
+        amountDue: nullableNumber(),
+        confidence: { type: 'NUMBER' },
+      },
+      required: [
+        'subtotal',
+        'totalDiscount',
+        'totalTax',
+        'shippingAndHandling',
+        'grandTotal',
+        'amountPaid',
+        'amountDue',
+        'confidence',
+      ],
+    },
+  },
+  required: [
+    'supplier',
+    'buyer',
+    'invoice',
+    'lineItems',
+    'taxBreakdown',
+    'totals',
+  ],
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Injectable()
@@ -86,8 +280,8 @@ export class GeminiProvider implements LlmProvider {
       generationConfig: {
         temperature,
         maxOutputTokens: maxTokens,
-        // Forces the model to emit valid JSON.
         responseMimeType: 'application/json',
+        responseSchema: INVOICE_EXTRACTION_RESPONSE_SCHEMA,
       },
     });
 

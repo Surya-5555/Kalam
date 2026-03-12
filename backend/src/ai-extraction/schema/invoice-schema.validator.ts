@@ -61,9 +61,16 @@ export interface SchemaValidationResult {
 
 // ─── Primitive coercions ──────────────────────────────────────────────────────
 
+/** Sentinel strings that AIs emit instead of null/absent values. */
+const NULL_SENTINELS = new Set(['null', 'none', 'n/a', 'na', 'undefined', '-', '--', 'not available', 'not applicable']);
+
 function str(v: unknown, field: string, repairs: RepairRecord[]): string | null {
   if (v === null || v === undefined) return null;
-  if (typeof v === 'string') return v.trim() || null;
+  if (typeof v === 'string') {
+    const trimmed = v.trim();
+    if (!trimmed || NULL_SENTINELS.has(trimmed.toLowerCase())) return null;
+    return trimmed;
+  }
   if (typeof v === 'number' || typeof v === 'boolean') {
     repairs.push({ field, severity: 'coerced', detail: `${typeof v} coerced to string` });
     return String(v).trim() || null;
@@ -118,10 +125,12 @@ function isoDate(v: unknown, field: string, repairs: RepairRecord[]): string | n
   // Attempt to repair common formats: DD/MM/YYYY, MM/DD/YYYY, DD-MM-YYYY etc.
   const slash = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (slash) {
-    // Heuristic: if first part > 12 it must be DD; otherwise assume DD/MM
+    // Heuristic: if first part > 12 it must be the day (DD/MM/YYYY);
+    // if second part > 12 it must be the day (MM/DD/YYYY);
+    // otherwise default to DD/MM/YYYY (European convention).
     const [, a, b, year] = slash;
-    const day = +a > 12 ? a : b;
-    const month = +a > 12 ? b : a;
+    const day   = +a > 12 ? a : +b > 12 ? b : a;   // default DD first
+    const month = +a > 12 ? b : +b > 12 ? a : b;   // complement
     const repaired = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     const d = new Date(repaired);
     if (!isNaN(d.getTime())) {

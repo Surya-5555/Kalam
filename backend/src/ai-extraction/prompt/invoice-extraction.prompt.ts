@@ -16,6 +16,8 @@ STRICT OUTPUT RULES:
 no commentary, no trailing text.
 2. Every field in the schema must be present. Use null for missing or unknown \
 values; never omit a field.
+2a. Even when a section has no extracted values, you MUST still return that \
+section using the exact schema shape with nulls / empty arrays as appropriate.
 3. All monetary amounts must be plain numbers (e.g. 1234.56). Never return \
 amounts as strings. If a value is ambiguous or unreadable, use null.
 4. Confidence values must be a float between 0.0 and 1.0, inclusive:
@@ -77,6 +79,17 @@ LINE ITEMS:
 "percentage"; if as "$5.00 off" set discount = 5 and discountType = "fixed".
 - Never compute derived values (total, subtotal, taxAmount) from other fields — \
 only extract what is explicitly printed.
+
+OCR / LAYOUT RULES:
+- Raw text may come from OCR and lose table alignment. Use label anchors and \
+nearby text to reconstruct the intended fields.
+- Treat labels like BILL TO, SHIP TO, INVOICE #, INVOICE DATE, P.O.#, DUE DATE, \
+SUBTOTAL, SALES TAX, TOTAL, QTY, DESCRIPTION, UNIT PRICE, AMOUNT as strong field anchors.
+- If a label is present and its value appears on the same line or the immediately \
+following line, treat that value as authoritative.
+- For invoice-style tables, lines that look like "1  Front and rear brake cables  100.00  100.00" \
+should be parsed as line items even if spacing is imperfect.
+- Preserve the distinction between BILL TO and SHIP TO. BILL TO maps to buyer.
 
 TAX BREAKDOWN:
 - Capture each distinct tax band as a separate entry.

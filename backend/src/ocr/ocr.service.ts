@@ -134,6 +134,11 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
         logger: () => undefined, // silence per-progress events
       });
 
+      await this.tesseractWorker.setParameters({
+        preserve_interword_spaces: '1',
+        user_defined_dpi: '300',
+      });
+
       this.logger.log('Tesseract worker ready');
     } catch (err: any) {
       this.logger.error(`Failed to initialise Tesseract worker: ${err?.message}`);
@@ -296,16 +301,30 @@ export class OcrService implements OnModuleInit, OnModuleDestroy {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const sharp = require('sharp') as typeof import('sharp');
 
-    return sharp(buffer)
-      .rotate()           // 1. EXIF-based auto-rotation
-      .greyscale()        // 2. Convert to single-channel greyscale
-      .normalize()        // 3. Auto stretch contrast (min→0, max→255)
-      .sharpen({          // 4. Unsharp-mask: enhance edges of characters
+    const image = sharp(buffer).rotate();
+    const metadata = await image.metadata();
+
+    let pipeline = image;
+
+    // Small invoice screenshots/photos benefit from upscaling before OCR.
+    // This especially helps tiny right-column metadata like invoice number,
+    // dates, totals, and unit prices.
+    if ((metadata.width ?? 0) > 0 && (metadata.width ?? 0) < 1600) {
+      pipeline = pipeline.resize({
+        width: (metadata.width ?? 0) * 2,
+        kernel: sharp.kernel.lanczos3,
+      });
+    }
+
+    return pipeline
+      .greyscale()        // 1. Convert to single-channel greyscale
+      .normalize()        // 2. Auto stretch contrast (min→0, max→255)
+      .sharpen({          // 3. Unsharp-mask: enhance edges of characters
         sigma: 1.2,
         m1: 0.5,
         m2: 2.5,
       })
-      .median(3)          // 5. 3×3 median filter for noise reduction
+      .median(3)          // 4. 3×3 median filter for noise reduction
       .png({ compressionLevel: 1 }) // fast PNG for Tesseract
       .toBuffer();
   }

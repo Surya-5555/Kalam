@@ -93,6 +93,77 @@ for (const entry of STATES) {
   }
 }
 
+// ─── US states ────────────────────────────────────────────────────────────────
+
+interface UsStateEntry {
+  name: string;
+  /** 2-letter USPS / ISO 3166-2:US sub-code. */
+  isoCode: string;
+}
+
+const US_STATES: UsStateEntry[] = [
+  { name: 'Alabama',              isoCode: 'AL' },
+  { name: 'Alaska',               isoCode: 'AK' },
+  { name: 'Arizona',              isoCode: 'AZ' },
+  { name: 'Arkansas',             isoCode: 'AR' },
+  { name: 'California',           isoCode: 'CA' },
+  { name: 'Colorado',             isoCode: 'CO' },
+  { name: 'Connecticut',          isoCode: 'CT' },
+  { name: 'Delaware',             isoCode: 'DE' },
+  { name: 'Florida',              isoCode: 'FL' },
+  { name: 'Georgia',              isoCode: 'GA' },
+  { name: 'Hawaii',               isoCode: 'HI' },
+  { name: 'Idaho',                isoCode: 'ID' },
+  { name: 'Illinois',             isoCode: 'IL' },
+  { name: 'Indiana',              isoCode: 'IN' },
+  { name: 'Iowa',                 isoCode: 'IA' },
+  { name: 'Kansas',               isoCode: 'KS' },
+  { name: 'Kentucky',             isoCode: 'KY' },
+  { name: 'Louisiana',            isoCode: 'LA' },
+  { name: 'Maine',                isoCode: 'ME' },
+  { name: 'Maryland',             isoCode: 'MD' },
+  { name: 'Massachusetts',        isoCode: 'MA' },
+  { name: 'Michigan',             isoCode: 'MI' },
+  { name: 'Minnesota',            isoCode: 'MN' },
+  { name: 'Mississippi',          isoCode: 'MS' },
+  { name: 'Missouri',             isoCode: 'MO' },
+  { name: 'Montana',              isoCode: 'MT' },
+  { name: 'Nebraska',             isoCode: 'NE' },
+  { name: 'Nevada',               isoCode: 'NV' },
+  { name: 'New Hampshire',        isoCode: 'NH' },
+  { name: 'New Jersey',           isoCode: 'NJ' },
+  { name: 'New Mexico',           isoCode: 'NM' },
+  { name: 'New York',             isoCode: 'NY' },
+  { name: 'North Carolina',       isoCode: 'NC' },
+  { name: 'North Dakota',         isoCode: 'ND' },
+  { name: 'Ohio',                 isoCode: 'OH' },
+  { name: 'Oklahoma',             isoCode: 'OK' },
+  { name: 'Oregon',               isoCode: 'OR' },
+  { name: 'Pennsylvania',         isoCode: 'PA' },
+  { name: 'Rhode Island',         isoCode: 'RI' },
+  { name: 'South Carolina',       isoCode: 'SC' },
+  { name: 'South Dakota',         isoCode: 'SD' },
+  { name: 'Tennessee',            isoCode: 'TN' },
+  { name: 'Texas',                isoCode: 'TX' },
+  { name: 'Utah',                 isoCode: 'UT' },
+  { name: 'Vermont',              isoCode: 'VT' },
+  { name: 'Virginia',             isoCode: 'VA' },
+  { name: 'Washington',           isoCode: 'WA' },
+  { name: 'West Virginia',        isoCode: 'WV' },
+  { name: 'Wisconsin',            isoCode: 'WI' },
+  { name: 'Wyoming',              isoCode: 'WY' },
+  { name: 'District of Columbia', isoCode: 'DC' },
+  { name: 'Puerto Rico',          isoCode: 'PR' },
+  { name: 'Guam',                 isoCode: 'GU' },
+];
+
+const US_BY_ISO = new Map<string, UsStateEntry>(
+  US_STATES.map(e => [e.isoCode.toLowerCase(), e]),
+);
+const US_BY_NAME = new Map<string, UsStateEntry>(
+  US_STATES.map(e => [e.name.toLowerCase(), e]),
+);
+
 export function normalizeState(raw: string | null | undefined): NormalizedState {
   if (raw == null || raw.trim() === '') {
     return { raw: raw ?? null, normalized: null, isoCode: null, gstCode: null, confidence: 0 };
@@ -107,7 +178,7 @@ export function normalizeState(raw: string | null | undefined): NormalizedState 
     return { raw: input, normalized: entry.name, isoCode: entry.isoCode, gstCode: entry.gstCode, confidence: 1.0 };
   }
 
-  // ISO code match (2 chars)
+  // ISO code match (2 chars) — Indian only
   entry = BY_ISO_CODE.get(key);
   if (entry) {
     return { raw: input, normalized: entry.name, isoCode: entry.isoCode, gstCode: entry.gstCode, confidence: 0.95 };
@@ -128,13 +199,20 @@ export function normalizeState(raw: string | null | undefined): NormalizedState 
     return { raw: input, normalized: entry.name, isoCode: entry.isoCode, gstCode: entry.gstCode, confidence: 0.9 };
   }
 
-  // Partial / substring match (fallback — lower confidence)
+  // Partial / substring match — Indian states (fallback, lower confidence)
   for (const [alias, e] of BY_ALIAS) {
     if (key.includes(alias) || alias.includes(key)) {
       return { raw: input, normalized: e.name, isoCode: e.isoCode, gstCode: e.gstCode, confidence: 0.6 };
     }
   }
 
-  // Not an Indian state; pass through
+  // ── US state lookup ────────────────────────────────────────────────────────
+  // Try 2-letter postal code (e.g. "NY")
+  const usEntry = US_BY_ISO.get(key) ?? US_BY_NAME.get(key);
+  if (usEntry) {
+    return { raw: input, normalized: usEntry.name, isoCode: usEntry.isoCode, gstCode: null, confidence: 0.9 };
+  }
+
+  // Not a known state; pass through
   return { raw: input, normalized: input, isoCode: null, gstCode: null, confidence: 0.4 };
 }

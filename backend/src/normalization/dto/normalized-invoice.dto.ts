@@ -30,7 +30,7 @@ export type GstComponent = 'CGST' | 'SGST' | 'UTGST' | 'IGST' | 'CESS' | 'VAT' |
  * Best-effort tax regime detected from the tax breakdown entries.
  * Useful for routing the invoice to regime-specific business rules.
  */
-export type TaxRegime = 'GST' | 'VAT' | 'MIXED' | 'UNKNOWN';
+export type TaxRegime = 'GST' | 'VAT' | 'SALES_TAX' | 'MIXED' | 'UNKNOWN';
 
 // ─── Re-import the structural types we need ──────────────────────────────────
 

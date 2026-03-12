@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UserRoleResponseDto } from './dto/user-role-response.dto';
-import { UserRole } from '../auth/roles.constants';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class UserManagementService {
@@ -22,9 +22,9 @@ export class UserManagementService {
     dto: UpdateUserRoleDto,
   ): Promise<UserRoleResponseDto> {
     // Verify the owner is actually an owner
-    const ownerUser = (await this.prisma.user.findUnique({
+    const ownerUser = await this.prisma.user.findUnique({
       where: { id: ownerUserId },
-    })) as any;
+    });
 
     if (!ownerUser || !ownerUser.isOwner) {
       throw new ForbiddenException(
@@ -33,9 +33,9 @@ export class UserManagementService {
     }
 
     // Find the target user
-    const targetUser = (await this.prisma.user.findUnique({
+    const targetUser = await this.prisma.user.findUnique({
       where: { id: dto.userId },
-    })) as any;
+    });
 
     if (!targetUser) {
       throw new NotFoundException(`User with ID ${dto.userId} not found`);
@@ -46,14 +46,14 @@ export class UserManagementService {
     }
 
     // Update the user's role
-    const updatedUser = (await this.prisma.user.update({
+    const updatedUser = await this.prisma.user.update({
       where: { id: dto.userId },
       data: {
         role: dto.role,
         roleChangedBy: ownerUserId,
         roleChangedAt: new Date(),
-      } as any,
-    })) as any;
+      },
+    });
 
     return this.mapUserToResponseDto(updatedUser);
   }
@@ -63,9 +63,9 @@ export class UserManagementService {
    */
   async getAllUsers(ownerUserId: number): Promise<UserRoleResponseDto[]> {
     // Verify the owner is actually an owner
-    const ownerUser = (await this.prisma.user.findUnique({
+    const ownerUser = await this.prisma.user.findUnique({
       where: { id: ownerUserId },
-    })) as any;
+    });
 
     if (!ownerUser || !ownerUser.isOwner) {
       throw new ForbiddenException(
@@ -73,7 +73,7 @@ export class UserManagementService {
       );
     }
 
-    const users = (await this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       select: {
         id: true,
         name: true,
@@ -82,11 +82,11 @@ export class UserManagementService {
         isOwner: true,
         roleChangedAt: true,
         createdAt: true,
-      } as any,
+      },
       orderBy: {
         createdAt: 'desc',
       },
-    })) as any[];
+    });
 
     return users.map((user) => this.mapUserToResponseDto(user));
   }
@@ -99,9 +99,9 @@ export class UserManagementService {
     userId: number,
   ): Promise<UserRoleResponseDto> {
     // Verify the owner is actually an owner
-    const ownerUser = (await this.prisma.user.findUnique({
+    const ownerUser = await this.prisma.user.findUnique({
       where: { id: ownerUserId },
-    })) as any;
+    });
 
     if (!ownerUser || !ownerUser.isOwner) {
       throw new ForbiddenException(
@@ -109,7 +109,7 @@ export class UserManagementService {
       );
     }
 
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -119,8 +119,8 @@ export class UserManagementService {
         isOwner: true,
         roleChangedAt: true,
         createdAt: true,
-      } as any,
-    })) as any;
+      },
+    });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
@@ -134,9 +134,9 @@ export class UserManagementService {
    */
   async getUserStats(ownerUserId: number) {
     // Verify the owner is actually an owner
-    const ownerUser = (await this.prisma.user.findUnique({
+    const ownerUser = await this.prisma.user.findUnique({
       where: { id: ownerUserId },
-    })) as any;
+    });
 
     if (!ownerUser || !ownerUser.isOwner) {
       throw new ForbiddenException(

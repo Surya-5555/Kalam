@@ -1,4 +1,4 @@
-import { UserRole } from '../../auth/roles.constants';
+import { UserRole } from '@prisma/client';
 
 export class UserRoleResponseDto {
   id: number;

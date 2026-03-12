@@ -1,6 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UserManagementService } from './user-management.service';
-import { UserRole } from '../auth/roles.constants';
+import { UserRole } from '@prisma/client';
 
 describe('UserManagementService', () => {
   const prisma = {

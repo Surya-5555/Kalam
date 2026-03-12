@@ -1,7 +1,7 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ManagerReportingService } from './manager-reporting.service';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../auth/roles.constants';
+import { UserRole } from '@prisma/client';
 import {
   ManagerDashboardOverviewDto,
   ManagerDetailedReportDto,

@@ -12,7 +12,7 @@ export default async function ForbiddenPage({
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6">
-      <div className="max-w-md rounded-[32px] border border-slate-200 bg-white p-10 text-center shadow-sm">
+      <div className="max-w-md rounded-4xl border border-slate-200 bg-white p-10 text-center shadow-sm">
         <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">
           <ShieldAlert className="size-7" />
         </div>

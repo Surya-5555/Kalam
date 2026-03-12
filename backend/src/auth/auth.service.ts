@@ -9,7 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes, createHash } from 'crypto';
-import { UserRole } from './roles.constants';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {

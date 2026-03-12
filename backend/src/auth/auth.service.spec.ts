@@ -1,5 +1,5 @@
 import { AuthService } from './auth.service';
-import { UserRole } from './roles.constants';
+import { UserRole } from '@prisma/client';
 
 describe('AuthService', () => {
   const prisma = {

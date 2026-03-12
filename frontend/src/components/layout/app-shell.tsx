@@ -30,7 +30,7 @@ export function AppShell({
   const navItems = getNavigationItems(user);
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(241,245,249,0.95),_rgba(255,255,255,1)_45%),linear-gradient(180deg,_#f8fafc_0%,_#ffffff_100%)] text-slate-900">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(241,245,249,0.95),rgba(255,255,255,1)_45%),linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] text-slate-900">
       <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-4 py-4 lg:px-6">
         <aside className="hidden w-72 shrink-0 rounded-[28px] border border-slate-200 bg-white/90 p-5 shadow-sm backdrop-blur lg:flex lg:flex-col">
           <button

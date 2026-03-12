@@ -1,5 +1,5 @@
 import { IsInt, IsEnum, IsOptional } from 'class-validator';
-import { UserRole } from '../../auth/roles.constants';
+import { UserRole } from '@prisma/client';
 
 export class UpdateUserRoleDto {
   @IsInt()

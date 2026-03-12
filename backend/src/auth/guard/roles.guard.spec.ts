@@ -1,7 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { RolesGuard } from './roles.guard';
-import { UserRole } from '../roles.constants';
+import { UserRole } from '@prisma/client';
 
 describe('RolesGuard', () => {
   it('allows access when user has required role', () => {

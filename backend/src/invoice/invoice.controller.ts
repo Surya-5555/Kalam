@@ -68,6 +68,31 @@ export class InvoiceController {
     return this.processingStatusService.getStatus(id, userId);
   }
 
+  /**
+   * GET /invoice/:id/result
+   *
+   * Returns the fully structured processing result once the pipeline is done.
+   *
+   * Response contract: InvoiceProcessingResultDto
+   *  - status: 'processing' | 'completed' | 'partial' | 'failed'
+   *  - invoice: NormalizedInvoice | null
+   *  - validation: ValidationSummary | null
+   *  - warnings: PipelineWarning[]
+   *  - duplicates: DuplicateDetectionResult | null
+   *  - metadata: ProcessingMetadata | null
+   *
+   * When status === 'processing', all content fields are null.
+   * Poll GET /:id/status for stage-level progress; call this endpoint once
+   * status transitions to completed/partial/failed.
+   */
+  @Get(':id/result')
+  async getProcessingResult(
+    @Param('id') id: string,
+    @GetUser('id') userId: number,
+  ) {
+    return this.invoiceService.getProcessingResult(id, userId);
+  }
+
   @Get(':id')
   async getInvoiceById(
     @Param('id') id: string,

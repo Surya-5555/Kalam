@@ -5,6 +5,7 @@ import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { PipelineExceptionFilter } from './common/filters/pipeline-exception.filter';
 
 async function bootstrap() {
   // JWT Secret validation - fail fast
@@ -35,11 +36,14 @@ async function bootstrap() {
 
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Dont allow other fields(Removes extra fields)
-      forbidNonWhitelisted: true, // Throws error, dont silently listen to the wrong incoming fields
-      transform: true, // It transforms plain JS to fit in our DTO
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
+
+  // Global exception filter — must be registered AFTER pipes
+  app.useGlobalFilters(new PipelineExceptionFilter());
 
   await app.listen(process.env.PORT ?? 3001);
 }

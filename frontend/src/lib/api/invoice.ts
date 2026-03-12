@@ -424,6 +424,51 @@ export interface BusinessValidationResult {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type DuplicateStatus =
+  | 'no_duplicate'
+  | 'possible_duplicate'
+  | 'exact_duplicate';
+
+export interface DuplicateMatch {
+  documentId: string;
+  originalName: string;
+  uploadedAt: string;
+  matchedFields: string[];
+  status: Exclude<DuplicateStatus, 'no_duplicate'>;
+}
+
+export interface DuplicateDetectionResult {
+  status: DuplicateStatus;
+  matches: DuplicateMatch[];
+  checkedCount: number;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PipelineWarningCode =
+  | 'OCR_LOW_CONFIDENCE'
+  | 'OCR_PARTIAL_FAILURE'
+  | 'AI_EXTRACTION_PARTIAL'
+  | 'SCHEMA_REPAIR'
+  | 'LOW_OVERALL_CONFIDENCE'
+  | 'MISSING_INVOICE_NUMBER'
+  | 'MISSING_INVOICE_DATE'
+  | 'MISSING_SUPPLIER_GSTIN'
+  | 'UNCLEAR_PAYMENT_TERMS'
+  | 'TOTALS_MISMATCH'
+  | 'LINE_ITEM_TOTAL_MISMATCH'
+  | 'DUPLICATE_DETECTED'
+  | 'DUPLICATE_POSSIBLE';
+
+export interface PipelineWarning {
+  code: PipelineWarningCode;
+  message: string;
+  field?: string | null;
+  details?: string | null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface AiExtractionResult {
   status: AiExtractionStatus;
   extractedInvoice: ExtractedInvoice | null;
@@ -431,8 +476,10 @@ export interface AiExtractionResult {
   schemaRepairs: SchemaRepairRecord[];
   normalizedInvoice: NormalizedInvoice | null;
   businessValidation: BusinessValidationResult | null;
+  duplicateDetection: DuplicateDetectionResult | null;
+  /** Structured non-fatal pipeline warnings (OCR quality, missing fields, etc). */
+  warnings: PipelineWarning[];
   overallConfidence: number;
-  warnings: string[];
   extractionModel: string;
   extractionTimestamp: string;
   sourceTextMethod: 'native-text-extraction' | 'ocr' | 'image-ocr';

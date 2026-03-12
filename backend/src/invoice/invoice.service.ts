@@ -11,28 +11,25 @@ import { randomUUID } from 'crypto';
 import { PrismaService } from 'prisma/prisma.service';
 import { DocumentInspectionService } from '../inspection/inspection.service';
 import { InspectionResultDto } from '../inspection/dto/inspection-result.dto';
-import { DocumentTypeDetectionService } from '../document-type/document-type.service';
-import { PdfTextExtractionService } from '../pdf-text-extraction/pdf-text-extraction.service';
-import { PdfTextExtractionResultDto } from '../pdf-text-extraction/dto/pdf-text-extraction-result.dto';
-import { OcrService } from '../ocr/ocr.service';
-import { OcrResultDto } from '../ocr/dto/ocr-result.dto';
-import { AiExtractionService } from '../ai-extraction/ai-extraction.service';
 import { ProcessingStatusService } from '../processing-status/processing-status.service';
-import { ProcessingStage } from '../processing-status/dto/processing-stage.dto';
+import { InvoicePipelineService } from '../invoice-pipeline/invoice-pipeline.service';
+import type { PipelineRunResult } from '../invoice-pipeline/dto/pipeline-io.dto';
+import type { InvoiceProcessingResultDto } from '../invoice-pipeline/dto/invoice-processing-result.dto';
+import { PipelineLogger } from '../common/pipeline-logger';
 
 @Injectable()
 export class InvoiceService {
+  /** Structured JSON logger — used for all pipeline stage events. */
+  private readonly pipelineLogger = new PipelineLogger(InvoiceService.name);
+  /** Plain NestJS logger — used for security events and startup messages. */
   private readonly logger = new Logger(InvoiceService.name);
   private readonly uploadDir = path.join(process.cwd(), 'uploads', 'invoices');
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly inspectionService: DocumentInspectionService,
-    private readonly documentTypeService: DocumentTypeDetectionService,
-    private readonly pdfTextExtractionService: PdfTextExtractionService,
-    private readonly ocrService: OcrService,
-    private readonly aiExtractionService: AiExtractionService,
     private readonly processingStatusService: ProcessingStatusService,
+    private readonly pipelineService: InvoicePipelineService,
   ) {
     this.ensureUploadDirExists();
   }
@@ -107,7 +104,7 @@ export class InvoiceService {
       fs.writeFileSync(filePath, file.buffer);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Failed to save uploaded file: ${msg}`);
+      this.pipelineLogger.error('upload.file_save.failed', { mimeType: file.mimetype, fileSize: file.size, userId, reason: msg });
       throw new BadRequestException('Failed to save uploaded file');
     }
 
@@ -130,7 +127,7 @@ export class InvoiceService {
       await this.processingStatusService.createJob(documentId);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Failed to create DB records: ${msg}`);
+      this.pipelineLogger.error('upload.db_create.failed', { mimeType: file.mimetype, fileSize: file.size, userId, reason: msg });
       // Clean up saved file on DB failure
       fs.unlink(filePath, () => undefined);
       throw new BadRequestException('Failed to initiate document processing');
@@ -142,19 +139,19 @@ export class InvoiceService {
 
     // Fire-and-forget: the HTTP response is sent before this completes.
     setImmediate(() => {
-      this.runProcessingPipeline(documentId, fileBuffer, inspectionResult).catch(
+      this.runProcessingPipeline(documentId, fileBuffer, inspectionResult, userId).catch(
         (err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
-          this.logger.error(
-            `Unhandled error in processing pipeline for ${documentId}: ${msg}`,
-          );
+          this.pipelineLogger.withDocId(documentId).error('pipeline.unhandled_error', { reason: msg });
         },
       );
     });
 
-    this.logger.log(
-      `Invoice ${filename} queued for processing (user=${userId}, doc=${documentId})`,
-    );
+    this.pipelineLogger.withDocId(documentId).event('upload.queued', {
+      mimeType: file.mimetype,
+      fileSize: file.size,
+      userId,
+    });
 
     return {
       success: true,
@@ -167,183 +164,53 @@ export class InvoiceService {
   }
 
   // --------------------------------------------------------------------
-  // Background pipeline — runs entirely outside the HTTP request cycle.
-  // Each stage updates the ProcessingJob in the DB.
-  // On any unrecoverable error, the job and document are marked failed.
+  // Background pipeline — delegates to InvoicePipelineService.
+  // This method only handles DB persistence after the orchestrator finishes.
+  // All stage logic lives in InvoicePipelineService.run().
   // --------------------------------------------------------------------
   private async runProcessingPipeline(
     documentId: string,
     fileBuffer: Buffer,
     inspectionResult: InspectionResultDto,
+    userId: number,
   ): Promise<void> {
-    let currentStage: ProcessingStage = 'inspection';
+    const log = this.pipelineLogger.withDocId(documentId);
 
-    try {
-      // ── Stage: inspection (already ran sync; just record timing) ──────
-      await this.processingStatusService.startStage(documentId, 'inspection');
-      await this.processingStatusService.completeStage(documentId, 'inspection');
+    const result = await this.pipelineService.run({
+      documentId,
+      userId,
+      fileBuffer,
+      inspectionResult,
+    });
 
-      // ── Stage: document_type_detection ────────────────────────────────
-      currentStage = 'document_type_detection';
-      await this.processingStatusService.startStage(
-        documentId,
-        'document_type_detection',
-      );
-
-      const documentTypeResult = this.documentTypeService.detect(
-        fileBuffer,
-        inspectionResult.fileType,
-      );
-      this.logger.log(
-        `[${documentId}] doc_type=${documentTypeResult.documentType} ` +
-          `method=${documentTypeResult.extractionMethod}`,
-      );
-
-      await this.processingStatusService.completeStage(
-        documentId,
-        'document_type_detection',
-      );
-
-      // ── Stage: text_extraction ────────────────────────────────────────
-      currentStage = 'text_extraction';
-      let textExtractionResult: PdfTextExtractionResultDto | null = null;
-
-      if (documentTypeResult.documentType === 'text-based-pdf') {
-        await this.processingStatusService.startStage(
-          documentId,
-          'text_extraction',
-        );
-        textExtractionResult = await this.pdfTextExtractionService.extract(
-          fileBuffer,
-        );
-        this.logger.log(
-          `[${documentId}] text_extraction: ${textExtractionResult.totalPages}pp ` +
-            `${textExtractionResult.extractedCharacterCount} chars`,
-        );
-        await this.processingStatusService.completeStage(
-          documentId,
-          'text_extraction',
-        );
-      } else {
-        await this.processingStatusService.skipStage(
-          documentId,
-          'text_extraction',
-        );
-      }
-
-      // ── Stage: ocr ───────────────────────────────────────────────────
-      currentStage = 'ocr';
-      let ocrResult: OcrResultDto | null = null;
-
-      if (documentTypeResult.documentType === 'scanned-pdf') {
-        await this.processingStatusService.startStage(documentId, 'ocr');
-        ocrResult = await this.ocrService.recognizeScannedPdf(fileBuffer);
-        this.logger.log(
-          `[${documentId}] ocr(scanned): ${ocrResult.totalPages}pp ` +
-            `avg_conf=${ocrResult.averageConfidence}%`,
-        );
-        await this.processingStatusService.completeStage(documentId, 'ocr');
-      } else if (documentTypeResult.documentType === 'image-document') {
-        await this.processingStatusService.startStage(documentId, 'ocr');
-        ocrResult = await this.ocrService.recognizeImage(fileBuffer);
-        this.logger.log(
-          `[${documentId}] ocr(image): ${ocrResult.extractedCharacterCount} chars ` +
-            `conf=${ocrResult.averageConfidence}%`,
-        );
-        await this.processingStatusService.completeStage(documentId, 'ocr');
-      } else {
-        await this.processingStatusService.skipStage(documentId, 'ocr');
-      }
-
-      // ── Stage: ai_extraction ─────────────────────────────────────────
-      currentStage = 'ai_extraction';
-      await this.processingStatusService.startStage(documentId, 'ai_extraction');
-
-      const aiExtractionResult = await this.aiExtractionService.extract(
-        textExtractionResult,
-        ocrResult,
-      );
-
-      this.logger.log(
-        `[${documentId}] ai_extraction: status=${aiExtractionResult.status} ` +
-          `confidence=${aiExtractionResult.overallConfidence.toFixed(2)}`,
-      );
-
-      if (aiExtractionResult.status === 'failed') {
-        await this.processingStatusService.completeStage(
-          documentId,
-          'ai_extraction',
-        );
-        await this.processingStatusService.failJob(
-          documentId,
-          'ai_extraction',
-          aiExtractionResult.extractionError ??
-            'AI extraction returned a failed status',
-        );
-        await this.prisma.invoiceDocument.update({
-          where: { id: documentId },
-          data: { status: 'failed' },
-        });
-        return;
-      }
-
-      await this.processingStatusService.completeStage(
-        documentId,
-        'ai_extraction',
-      );
-
-      // ── Stage: normalization (ran inside ai_extraction; mark instantly) ─
-      currentStage = 'normalization';
-      await this.processingStatusService.startStage(documentId, 'normalization');
-      await this.processingStatusService.completeStage(
-        documentId,
-        'normalization',
-      );
-
-      // ── Stage: validation (ran inside ai_extraction; mark instantly) ───
-      currentStage = 'validation';
-      await this.processingStatusService.startStage(documentId, 'validation');
-      await this.processingStatusService.completeStage(documentId, 'validation');
-
-      // ── Persist final result ─────────────────────────────────────────
-      const docStatus =
-        inspectionResult.qualityWarnings.length > 0
+    // Map pipeline outcome to the DB document status field.
+    const dbStatus =
+      result.status === 'failed'
+        ? 'failed'
+        : result.status === 'partial'
           ? 'needs_review'
-          : aiExtractionResult.status === 'success'
-            ? 'completed'
-            : 'needs_review'; // partial
+          : 'completed';
 
-      await this.prisma.invoiceDocument.update({
+    await this.prisma.invoiceDocument
+      .update({
         where: { id: documentId },
         data: {
-          status: docStatus,
-          extractedData: JSON.parse(
-            JSON.stringify(aiExtractionResult),
-          ) as object,
+          status: dbStatus,
+          // Persist the full PipelineRunResult so GET /result can reconstruct
+          // the structured response without re-running anything.
+          extractedData: JSON.parse(JSON.stringify(result)) as object,
         },
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        log.error('pipeline.db_persist_failed', {
+          reason: msg,
+          pipelineStatus: result.status,
+        });
       });
-
-      await this.processingStatusService.completeJob(documentId);
-
-      this.logger.log(
-        `[${documentId}] Pipeline complete — document status: ${docStatus}`,
-      );
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `[${documentId}] Pipeline failed at stage "${currentStage}": ${msg}`,
-      );
-
-      await this.processingStatusService.failJob(documentId, currentStage, msg);
-
-      await this.prisma.invoiceDocument
-        .update({
-          where: { id: documentId },
-          data: { status: 'failed' },
-        })
-        .catch(() => undefined); // best-effort
-    }
   }
+
+  // ─── Query methods ────────────────────────────────────────────────────────
 
   async getRecentDocuments(userId: number, limit: number = 10) {
     return this.prisma.invoiceDocument.findMany({
@@ -365,6 +232,108 @@ export class InvoiceService {
     return document;
   }
 
+  /**
+   * Returns the fully structured processing result for a completed document.
+   *
+   * Maps the stored PipelineRunResult (persisted as JSON by the background
+   * pipeline) to the public InvoiceProcessingResultDto response shape,
+   * including a flattened validation summary.
+   *
+   * Returns `{ status: 'processing' }` with null fields when the pipeline is
+   * still running — callers should poll /invoice/:id/status instead.
+   */
+  async getProcessingResult(
+    id: string,
+    userId: number,
+  ): Promise<InvoiceProcessingResultDto> {
+    const doc = await this.prisma.invoiceDocument.findFirst({
+      where: { id, userId },
+      select: {
+        id: true,
+        originalName: true,
+        uploadedAt: true,
+        status: true,
+        extractedData: true,
+      },
+    });
+
+    if (!doc) {
+      throw new NotFoundException('Document not found');
+    }
+
+    // Pipeline still running — tell the client to poll /status instead.
+    if (doc.status === 'processing') {
+      return {
+        documentId: doc.id,
+        originalName: doc.originalName,
+        uploadedAt: doc.uploadedAt.toISOString(),
+        status: 'processing',
+        invoice: null,
+        validation: null,
+        warnings: [],
+        duplicates: null,
+        metadata: null,
+        failedAtStage: null,
+        failureReason: null,
+      };
+    }
+
+    const stored = doc.extractedData as PipelineRunResult | null;
+
+    // Guard: result data missing (shouldn't happen in normal operation).
+    if (!stored) {
+      return {
+        documentId: doc.id,
+        originalName: doc.originalName,
+        uploadedAt: doc.uploadedAt.toISOString(),
+        status: 'failed',
+        invoice: null,
+        validation: null,
+        warnings: [],
+        duplicates: null,
+        metadata: null,
+        failedAtStage: null,
+        failureReason: 'No processing data found',
+      };
+    }
+
+    // Build the flattened validation summary from BusinessValidationResult.
+    const bv = stored.validation;
+    const validation = bv
+      ? {
+          isValid: bv.isValid,
+          errorCount: bv.errors.length,
+          warningCount: bv.warnings.length,
+          errors: bv.errors,
+          warnings: bv.warnings,
+          rulesRun: bv.rulesRun,
+          rulesPassed: bv.rulesPassed,
+        }
+      : null;
+
+    // Map DB status → API status (needs_review → partial).
+    const apiStatus =
+      stored.status === 'failed'
+        ? 'failed'
+        : doc.status === 'needs_review'
+          ? 'partial'
+          : 'completed';
+
+    return {
+      documentId: doc.id,
+      originalName: doc.originalName,
+      uploadedAt: doc.uploadedAt.toISOString(),
+      status: apiStatus,
+      invoice: stored.invoice,
+      validation,
+      warnings: stored.warnings,
+      duplicates: stored.duplicateDetection,
+      metadata: stored.metadata,
+      failedAtStage: stored.failedAtStage,
+      failureReason: stored.failureReason,
+    };
+  }
+
   async getDocumentFilePath(
     id: string,
     userId: number,
@@ -383,7 +352,7 @@ export class InvoiceService {
     // (the :id param) can never escape the upload directory.
     const safeName = path.basename(document.storedName);
     if (safeName !== document.storedName) {
-      this.logger.warn(`Suspicious storedName detected for document ${id}`);
+      this.logger.warn(`[security] Suspicious storedName for doc=${id}`);
       throw new NotFoundException('Document not found');
     }
 
@@ -393,7 +362,7 @@ export class InvoiceService {
 
     // Ensure the resolved path stays inside the upload directory.
     if (!resolvedFile.startsWith(resolvedDir + path.sep)) {
-      this.logger.warn(`Path traversal attempt for document ${id}`);
+      this.logger.warn(`[security] Path traversal attempt for doc=${id}`);
       throw new NotFoundException('Document not found');
     }
 

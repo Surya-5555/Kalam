@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import {
   ORDERED_STAGES,
@@ -6,10 +6,13 @@ import {
   ProcessingStatusResponse,
   StageRecord,
 } from './dto/processing-stage.dto.js';
+import { PipelineLogger } from '../common/pipeline-logger';
 
 @Injectable()
 export class ProcessingStatusService {
-  private readonly logger = new Logger(ProcessingStatusService.name);
+  private readonly pipelineLogger = new PipelineLogger(
+    ProcessingStatusService.name,
+  );
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -51,6 +54,7 @@ export class ProcessingStatusService {
         stages: JSON.parse(JSON.stringify(stages)) as object,
       },
     });
+    this.pipelineLogger.withDocId(documentId).event('job.created');
   }
 
   private async safeUpdate(
@@ -63,7 +67,7 @@ export class ProcessingStatusService {
         where: { documentId },
       });
       if (!job) {
-        this.logger.warn(`ProcessingJob not found for documentId=${documentId}`);
+        this.pipelineLogger.withDocId(documentId).warn('job.not_found', { operation: 'safeUpdate' });
         return;
       }
       const stages = (job.stages as unknown as StageRecord[]).slice();
@@ -77,9 +81,7 @@ export class ProcessingStatusService {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(
-        `Stage tracking DB update failed for ${documentId}: ${msg}`,
-      );
+      this.pipelineLogger.withDocId(documentId).error('job.db_update_failed', { reason: msg });
     }
   }
 
@@ -150,6 +152,7 @@ export class ProcessingStatusService {
         completedAt: new Date().toISOString(),
       },
     );
+    this.pipelineLogger.withDocId(documentId).error('job.failed', { stage });
   }
 
   /** Mark the entire job as successfully completed. */
@@ -171,6 +174,7 @@ export class ProcessingStatusService {
         completedAt: now,
       },
     );
+    this.pipelineLogger.withDocId(documentId).event('job.completed');
   }
 
   /** Fetch the full processing status for a document, scoped to the owning user. */

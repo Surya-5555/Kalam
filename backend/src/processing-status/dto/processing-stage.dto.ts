@@ -7,6 +7,7 @@ export const ORDERED_STAGES = [
   'ai_extraction',
   'normalization',
   'validation',
+  'duplicate_detection',
   'completed',
 ] as const;
 

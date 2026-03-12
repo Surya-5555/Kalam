@@ -3,20 +3,22 @@ import { InvoiceController } from './invoice.controller';
 import { InvoiceService } from './invoice.service';
 import { PrismaService } from 'prisma/prisma.service';
 import { InspectionModule } from '../inspection/inspection.module';
-import { DocumentTypeModule } from '../document-type/document-type.module';
-import { PdfTextExtractionModule } from '../pdf-text-extraction/pdf-text-extraction.module';
-import { OcrModule } from '../ocr/ocr.module';
-import { AiExtractionModule } from '../ai-extraction/ai-extraction.module';
 import { ProcessingStatusModule } from '../processing-status/processing-status.module';
+import { InvoicePipelineModule } from '../invoice-pipeline/invoice-pipeline.module';
 
+/**
+ * InvoiceModule
+ *
+ * Owns the HTTP layer (controller + service) for invoice upload and query
+ * operations.  All stage-level processing is provided by InvoicePipelineModule,
+ * which is imported here to make InvoicePipelineService injectable into
+ * InvoiceService.
+ */
 @Module({
   imports: [
     InspectionModule,
-    DocumentTypeModule,
-    PdfTextExtractionModule,
-    OcrModule,
-    AiExtractionModule,
     ProcessingStatusModule,
+    InvoicePipelineModule,
   ],
   controllers: [InvoiceController],
   providers: [InvoiceService, PrismaService],

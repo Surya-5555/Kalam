@@ -33,8 +33,12 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/estree-jsx": "^1.0.5",
     "@types/hast": "^3.0.4",
+    "@types/jest": "^30.0.0",
     "@types/js-cookie": "^3.0.6",
     "@types/mdx": "^2.0.13",
     "@types/node": "^20",
@@ -45,8 +49,11 @@
     "autoprefixer": "^10.4.23",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18",
+    "ts-jest": "^29.4.6",
     "typescript": "^5"
   }
 }

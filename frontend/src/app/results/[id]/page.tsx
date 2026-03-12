@@ -28,6 +28,7 @@ import { ValidationSection } from "@/components/invoice-results/validation-secti
 import { RawJsonSection } from "@/components/invoice-results/raw-json-section";
 import { SectionCard } from "@/components/invoice-results/section-card";
 import { ExportActions } from "@/components/invoice-results/export-actions";
+import { WarningsPanel } from "@/components/invoice-results/warnings-panel";
 
 // Skip SSR for the PDF/image preview — it relies on browser APIs (Blob,
 // ResizeObserver, PDF.js worker) that do not exist on the server.
@@ -164,7 +165,7 @@ function ExtractionQualityCard({ data }: { data: AiExtractionResult }) {
           {data.warnings.slice(0, 3).map((w, i) => (
             <p key={i} className="text-[11px] text-amber-700 flex gap-1">
               <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-              {w}
+              {w.message}
             </p>
           ))}
           {data.warnings.length > 3 && (
@@ -537,16 +538,24 @@ export default function ResultsPage() {
                     />
                   )}
 
+                  {/* Pipeline warnings */}
+                  {extracted.warnings.length > 0 && (
+                    <WarningsPanel warnings={extracted.warnings} />
+                  )}
+
                   {/* Raw JSON */}
                   <RawJsonSection data={extracted} />
                 </>
               ) : (
                 <>
-                  {/* No normalizedInvoice — show validation + raw only */}
+                  {/* No normalizedInvoice — show validation + warnings + raw only */}
                   {extracted.businessValidation && (
                     <ValidationSection
                       validation={extracted.businessValidation}
                     />
+                  )}
+                  {extracted.warnings.length > 0 && (
+                    <WarningsPanel warnings={extracted.warnings} />
                   )}
                   <RawJsonSection data={extracted} />
                 </>

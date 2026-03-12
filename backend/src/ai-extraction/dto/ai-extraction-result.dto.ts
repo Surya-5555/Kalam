@@ -3,6 +3,8 @@ import type { CanonicalInvoice } from '../schema/invoice.schema';
 import type { RepairRecord } from '../schema/invoice-schema.validator';
 import type { NormalizedInvoice } from '../../normalization/dto/normalized-invoice.dto';
 import type { BusinessValidationResult } from '../../business-validation/types';
+import type { DuplicateDetectionResult } from '../../duplicate-detection/dto/duplicate-detection-result.dto';
+import type { PipelineWarning } from '../../common/pipeline-warning';
 
 /**
  * 'success' – extraction ran to completion with no structural issues.
@@ -47,8 +49,8 @@ export class AiExtractionResultDto {
   /** Mean confidence across all sections (0–1). 0 when status is 'failed'. */
   overallConfidence: number;
 
-  /** Non-blocking validation or structural warnings produced during parsing. */
-  warnings: string[];
+  /** Non-blocking pipeline warnings. Empty when status is 'failed'. */
+  warnings: PipelineWarning[];
 
   /** LLM model identifier used for this extraction. */
   extractionModel: string;
@@ -64,4 +66,11 @@ export class AiExtractionResultDto {
 
   /** Human-readable error description when status is 'failed'. null otherwise. */
   extractionError: string | null;
+
+  /**
+   * Duplicate detection result produced by the pipeline after extraction.
+   * null when extraction failed, or when no prior invoices exist to compare.
+   * Set by InvoiceService — not by AiExtractionService itself.
+   */
+  duplicateDetection: DuplicateDetectionResult | null;
 }

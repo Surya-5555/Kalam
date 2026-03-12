@@ -1,3 +1,5 @@
+import { apiFetch } from '../api';
+
 export interface InvoiceDocument {
   id: string;
   userId: number;
@@ -12,30 +14,20 @@ export interface InvoiceDocument {
   updatedAt: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+export async function getRecentInvoices(_token: string, limit: number = 10): Promise<InvoiceDocument[]> {
+  const response = await apiFetch(`/invoice/recent?limit=${limit}`);
 
-export async function getRecentInvoices(token: string, limit: number = 10): Promise<InvoiceDocument[]> {
-  const response = await fetch(`${API_URL}/invoice/recent?limit=${limit}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!response.ok) {
+  if (!response || !response.ok) {
     throw new Error('Failed to fetch recent invoices');
   }
 
   return response.json();
 }
 
-export async function getInvoiceById(id: string, token: string): Promise<InvoiceDocument> {
-  const response = await fetch(`${API_URL}/invoice/${id}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+export async function getInvoiceById(id: string, _token: string): Promise<InvoiceDocument> {
+  const response = await apiFetch(`/invoice/${id}`);
 
-  if (!response.ok) {
+  if (!response || !response.ok) {
     throw new Error('Failed to fetch invoice details');
   }
 

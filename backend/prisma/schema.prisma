@@ -41,6 +41,7 @@ model User {
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   invoices            InvoiceDocument[]
+  generatedInvoices   GeneratedInvoice[]
 }
 
 // =========================
@@ -116,4 +117,48 @@ model ProcessingJob {
   updatedAt     DateTime  @updatedAt
 
   @@index([documentId])
+}
+
+// =========================
+// GENERATED INVOICE TABLE
+// Invoices created by users and paid via Razorpay
+// =========================
+model GeneratedInvoice {
+  id              String   @id @default(uuid())
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Invoice meta
+  invoiceNumber   String
+  invoiceDate     String
+  placeOfSupply   String
+  paymentTerms    String
+
+  // Supplier
+  supplierName    String
+  supplierGstin   String
+  supplierAddress String
+  supplierPhone   String
+
+  // Items and taxes stored as JSON
+  items           Json
+  cgst            Float
+  sgst            Float
+  igst            Float
+
+  // Totals
+  subTotal        Float
+  taxTotal        Float
+  grandTotal      Float
+
+  // Razorpay payment info
+  razorpayOrderId   String   @unique
+  razorpayPaymentId String?
+  razorpaySignature String?
+  paymentStatus     String   @default("pending") // pending | paid
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
 }

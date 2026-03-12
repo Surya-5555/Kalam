@@ -15,15 +15,21 @@ export default function DashboardPage() {
   const [invoices, setInvoices] = useState<InvoiceDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
 
   const fetchInvoices = useCallback(async () => {
     if (!accessToken) return;
     try {
       setIsLoading(true);
+      setPageError(null);
       const data = await getRecentInvoices(accessToken);
       setInvoices(data);
     } catch (error) {
-      console.error("Failed to fetch invoices:", error);
+      setPageError(
+        error instanceof Error
+          ? error.message
+          : "Failed to load recent invoices.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -75,10 +81,28 @@ export default function DashboardPage() {
           <p className="text-slate-600 font-medium">Upload your supplier invoices for automatic data extraction.</p>
         </div>
 
+        {/* Quick actions */}
+        <div className="flex gap-4 mb-8">
+          <Button
+            onClick={() => router.push('/create-invoice')}
+            className="bg-slate-900 hover:bg-slate-700 text-white rounded-xl px-6 h-11 text-sm font-semibold shadow-sm"
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Create &amp; Pay Invoice
+          </Button>
+        </div>
+
         {uploadError && (
           <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center space-x-3 text-rose-900 shadow-sm">
             <p className="font-semibold text-sm flex-1">{uploadError}</p>
             <Button variant="ghost" className="text-rose-900 hover:bg-rose-100 rounded-full h-8 px-3 font-medium" onClick={() => setUploadError(null)}>Dismiss</Button>
+          </div>
+        )}
+
+        {pageError && (
+          <div className="mb-8 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center space-x-3 text-amber-900 shadow-sm">
+            <p className="font-semibold text-sm flex-1">{pageError}</p>
+            <Button variant="ghost" className="text-amber-900 hover:bg-amber-100 rounded-full h-8 px-3 font-medium" onClick={fetchInvoices}>Retry</Button>
           </div>
         )}
 

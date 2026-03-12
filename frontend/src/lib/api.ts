@@ -3,6 +3,9 @@ import { getAccessToken, setAccessToken, clearAccessToken } from "./auth";
 
 let refreshInFlight: Promise<string | null> | null = null;
 
+const getNetworkErrorMessage = () =>
+  `Cannot reach the backend at ${API_BASE_URL}. Make sure the backend server is running.`;
+
 const broadcastAccessToken = (token: string | null) => {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent("auth:accessToken", { detail: { accessToken: token } }));
@@ -11,10 +14,16 @@ const broadcastAccessToken = (token: string | null) => {
 const refreshAccessToken = async (): Promise<string | null> => {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
-      const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-      });
+      let refreshRes: Response;
+
+      try {
+        refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+      } catch {
+        return null;
+      }
 
       if (!refreshRes.ok) {
         clearAccessToken();
@@ -66,11 +75,17 @@ export const apiFetch = async (
   }
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${API_BASE_URL}${url}`, {
-    ...options,
-    headers,
-    credentials: "include", // IMPORTANT for refresh cookie
-  });
+  let res: Response;
+
+  try {
+    res = await fetch(`${API_BASE_URL}${url}`, {
+      ...options,
+      headers,
+      credentials: "include", // IMPORTANT for refresh cookie
+    });
+  } catch {
+    throw new Error(getNetworkErrorMessage());
+  }
 
   if (res.status === 401 && retry) {
     const refreshed = await refreshAccessToken();

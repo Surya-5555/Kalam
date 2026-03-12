@@ -1,0 +1,495 @@
+PROJECT DOCUMENT
+AI INVOICE OCR EXTRACTION SYSTEM
+
+---
+
+1. PROJECT OVERVIEW
+
+The goal of this project is to build an AI-powered system that automatically reads supplier invoices and converts them into structured JSON data that can be used by business systems such as ERP, accounting software, inventory systems, and analytics tools.
+
+In many companies, supplier invoices are received in formats like PDF files, scanned documents, images, or photographs taken from mobile devices. Employees in finance or accounting departments manually read these invoices and enter information such as supplier name, invoice number, item details, tax values, and totals into accounting systems. This process is slow, repetitive, and prone to human errors.
+
+This project automates that workflow.
+
+The system allows a company employee to upload an invoice document through a web interface. The system then analyzes the document, extracts text using PDF parsing or OCR, interprets the invoice contents using an AI model, converts the information into structured JSON, validates the extracted values, and presents the results in a user interface where the employee can review and export the data.
+
+The final output is structured invoice data that can be copied or downloaded as JSON.
+
+---
+
+2. PRIMARY USERS
+
+The system is used by company employees who manage supplier invoices.
+
+Typical roles include:
+
+Accounts payable staff
+Finance team members
+Procurement team members
+Inventory/store staff responsible for goods receipts
+Back-office staff entering invoices into accounting systems
+
+Suppliers do not upload invoices to the system. Suppliers send invoices to the company via email, WhatsApp, or other communication channels. The company employee receives the invoice and uploads it to the system.
+
+---
+
+3. BUSINESS PROBLEM BEING SOLVED
+
+Manual invoice entry causes several operational problems.
+
+Manual entry takes 5 to 30 minutes per invoice depending on complexity.
+
+Companies often process dozens or hundreds of invoices per day.
+
+Manual entry introduces errors such as:
+incorrect invoice numbers
+wrong tax calculations
+missing item lines
+incorrect totals
+
+Manual entry delays payment processing, reconciliation, and reporting.
+
+Invoice data remains trapped inside documents until someone manually enters it into a system.
+
+This project converts invoices from unstructured documents into structured machine-readable data.
+
+---
+
+4. SYSTEM OBJECTIVE
+
+The system must perform the following tasks:
+
+Accept invoice documents uploaded by employees.
+Detect document type and quality.
+Extract text from the invoice.
+Understand invoice structure and identify fields.
+Convert invoice content into structured JSON format.
+Normalize extracted values into consistent formats.
+Validate extracted data using business rules.
+Display results in a user interface for verification.
+Allow the employee to copy or download JSON output.
+
+---
+
+5. SUPPORTED INPUT DOCUMENT TYPES
+
+The system must support the following input formats:
+
+PDF documents
+JPG images
+PNG images
+
+Invoices may be:
+
+Digital PDFs containing embedded text.
+Scanned PDFs where each page is an image.
+Images captured by phone cameras.
+Images received via messaging applications such as WhatsApp.
+
+Invoices may contain:
+
+Multiple pages
+Tables of items
+Tax breakdowns
+Supplier information
+Payment terms
+Totals
+
+---
+
+6. SYSTEM WORKFLOW
+
+The system workflow follows this pipeline:
+
+Employee uploads invoice
+Document inspection and validation
+Document type detection
+Text extraction (PDF parsing or OCR)
+AI interpretation and field extraction
+Data normalization
+Business rule validation
+JSON generation
+UI display for review
+JSON export
+
+---
+
+7. DOCUMENT INSPECTION STAGE
+
+After a file is uploaded, the system performs document inspection before attempting extraction.
+
+The inspection stage verifies the following:
+
+File format is supported.
+File is not corrupted.
+PDF is not password protected.
+File size is within acceptable limits.
+Document type detection (text PDF vs scanned PDF vs image).
+Image quality assessment.
+
+If a PDF is password protected, the system stops processing and asks the user to upload an unlocked file.
+
+---
+
+8. DOCUMENT TYPE DETECTION
+
+The system determines how to extract text based on the document type.
+
+Case 1: Text-based PDF
+If the PDF contains embedded selectable text, the system extracts text directly using a PDF parsing library.
+
+Case 2: Scanned PDF
+If text extraction returns little or no text, the system identifies the document as a scanned PDF and applies OCR.
+
+Case 3: Image document
+If the uploaded file is JPG or PNG, the system performs OCR.
+
+---
+
+9. TEXT EXTRACTION TECHNOLOGY
+
+Text extraction occurs using two methods.
+
+For text-based PDFs, the system uses a PDF parsing library such as PyMuPDF.
+
+For scanned PDFs and images, the system uses an OCR library.
+
+OCR converts visual characters in images into digital text.
+
+OCR does not interpret meaning; it only extracts characters.
+
+Example OCR output:
+
+Supplier: ABC Textiles
+Invoice No: INV-2451
+Date: 01-Feb-2026
+Payment Terms: Fifteen Days
+Grand Total: 14,160
+
+This raw text still requires interpretation.
+
+---
+
+10. ROLE OF ARTIFICIAL INTELLIGENCE
+
+AI is used to interpret the extracted text.
+
+The AI model performs document understanding.
+
+AI tasks include:
+
+Identifying invoice fields.
+Detecting supplier information.
+Identifying invoice numbers and dates.
+Extracting item tables.
+Detecting tax values.
+Interpreting payment terms.
+Normalizing values into standard formats.
+Generating structured JSON output.
+
+The AI model reads the extracted text and converts it into structured invoice data.
+
+---
+
+11. AI MODEL TYPE
+
+The system uses a large language model (LLM) capable of document understanding.
+
+Examples include Gemini, GPT, or Claude.
+
+The LLM receives extracted text and produces structured JSON following a predefined schema.
+
+A custom prediction model is not required because:
+
+No labeled training dataset is available.
+Invoice layouts vary significantly across suppliers.
+LLMs already perform semantic classification and normalization effectively.
+
+---
+
+12. FIELD NORMALIZATION
+
+Invoices often express the same information in different formats.
+
+Examples:
+
+Payment terms may appear as:
+15 days
+Fifteen Days
+Net 15
+Due within fifteen days
+
+All of these represent the same value.
+
+The system normalizes such values.
+
+Example normalized structure:
+
+payment_terms_raw: original text
+payment_terms_days: numeric representation
+payment_terms_normalized: standardized string
+confidence: reliability score
+
+---
+
+13. VALUE REPRESENTATION STRUCTURE
+
+For fields requiring interpretation, the system stores multiple representations:
+
+Raw value extracted from the document.
+Normalized standardized value.
+Machine-readable numeric value when applicable.
+Confidence score indicating extraction reliability.
+
+Example structure:
+
+payment_terms:
+raw: "Fifteen Days"
+normalized: "15 days"
+days: 15
+confidence: 0.96
+
+---
+
+14. CONFIDENCE SCORING
+
+Each extracted field includes a confidence score.
+
+Confidence measures how reliably the system extracted the value.
+
+Confidence is determined by:
+
+Presence of clear field labels.
+Quality of OCR text.
+Contextual clarity.
+Successful normalization.
+
+High confidence occurs when the field label and value are clearly detected.
+
+Low confidence occurs when text is ambiguous or OCR quality is poor.
+
+---
+
+15. BUSINESS RULE VALIDATION
+
+After AI extraction, the system verifies correctness using deterministic rules.
+
+Validation includes:
+
+Checking that subtotal plus tax equals grand total.
+Verifying GSTIN format.
+Ensuring dates follow valid formats.
+Checking that quantities and prices are numeric.
+Detecting duplicate invoice numbers.
+
+If validation fails, the system generates warnings.
+
+---
+
+16. JSON OUTPUT STRUCTURE
+
+The system produces structured JSON representing the invoice.
+
+Example structure:
+
+supplier information
+invoice details
+item list
+tax breakdown
+totals
+confidence metadata
+
+Example JSON:
+
+supplier:
+name: ABC Textiles
+gstin: 33ABCDE1234F1Z5
+
+invoice:
+invoice_number: INV-2451
+invoice_date: 2026-02-01
+payment_terms:
+raw: Fifteen Days
+normalized: 15 days
+days: 15
+confidence: 0.96
+
+items:
+list of item objects containing name, quantity, rate, and amount
+
+tax:
+cgst
+sgst
+igst
+
+totals:
+subtotal
+tax_total
+grand_total
+
+
+Expected output: perfectly like this
+
+---
+
+{
+  "supplier": {
+    "name": "ABC Textiles",
+    "gstin": "33ABCDE1234F1Z5",
+    "address": "Tiruppur, TN",
+    "phone": "9XXXXXXXXX"
+  },
+
+  "invoice": {
+    "invoice_number": "INV-2451",
+    "invoice_date": "2026-02-01",
+    "place_of_supply": "Tamil Nadu",
+    "payment_terms": "15 days"
+  },
+
+  "items": [
+    { "name": "Cotton Fabric", "hsn": "5208", "qty": 100, "uom": "mtr", "rate": 120, "amount": 12000 }
+  ],
+
+  "tax": { "cgst": 1080, "sgst": 1080, "igst": 0 },
+
+  "totals": { "sub_total": 12000, "tax_total": 2160, "grand_total": 14160 }
+}
+
+---
+
+---
+
+17. USER INTERFACE REQUIREMENTS
+
+The system must include a web interface.
+
+The interface contains three main screens.
+
+Upload screen
+Processing screen
+Results screen
+
+Upload screen allows employees to select or drag-and-drop invoice files.
+
+Processing screen displays extraction progress.
+
+Results screen displays extracted data.
+
+---
+
+18. RESULTS SCREEN LAYOUT
+
+The results page contains two main sections.
+
+Left side displays the invoice preview.
+
+Right side displays extracted invoice data.
+
+Data is organized into sections:
+
+Supplier information
+Invoice details
+Item table
+Tax summary
+Totals
+
+Below these sections, the interface displays the raw JSON output.
+
+Buttons allow the user to copy or download the JSON.
+
+---
+
+19. SYSTEM ARCHITECTURE
+
+The system consists of the following components.
+
+Frontend web application
+Backend API server
+Document inspection service
+Text extraction service
+OCR service
+AI extraction service
+Normalization service
+Validation service
+JSON formatter service
+
+The frontend handles file uploads and displays results.
+
+The backend orchestrates document processing and AI extraction.
+
+---
+
+20. BACKEND PROCESSING PIPELINE
+
+The backend performs the following steps:
+
+Receive uploaded file
+Validate document
+Detect document type
+Extract text using PDF parser or OCR
+Send extracted text to AI model
+Receive structured JSON
+Normalize extracted values
+Validate data using business rules
+Return results to frontend
+
+---
+
+21. OUTPUT USAGE
+
+The generated JSON can be used by business systems.
+
+Possible uses include:
+
+Automatic invoice entry into ERP systems
+Integration with accounting software
+Inventory updates based on purchased items
+Tax reporting and reconciliation
+Supplier spend analysis
+Automated approval workflows
+
+JSON allows easy integration with APIs and databases.
+
+---
+
+22. SYSTEM BENEFITS
+
+The system reduces manual invoice entry time.
+
+Manual entry may take 15 minutes or more.
+
+Automated extraction reduces processing time to under one minute.
+
+Benefits include:
+
+Reduced manual work
+Fewer human errors
+Faster invoice processing
+Structured digital data for business systems
+
+---
+
+23. FINAL SYSTEM SUMMARY
+
+The system converts invoices from unstructured documents into structured digital data.
+
+It combines:
+
+Document inspection
+PDF parsing and OCR
+AI document understanding
+Data normalization
+Rule-based validation
+Structured JSON generation
+User interface verification
+
+The result is an automated invoice processing system that significantly improves operational efficiency for finance teams.
+
+---
+
+
+24. Tech stack:
+Read already availble codebase for current tech stack
+
+END OF DOCUMENT

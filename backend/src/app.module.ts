@@ -7,6 +7,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { RedisService } from './common/redis/redis.service.js';
 import { AuthModule } from './auth/auth.module.js';
+import { InvoiceModule } from './invoice/invoice.module';
 
 
 @Module({
@@ -23,6 +24,8 @@ import { AuthModule } from './auth/auth.module.js';
     ]),
 
     AuthModule,
+
+    InvoiceModule,
   ],
   controllers: [AppController],
   providers: [

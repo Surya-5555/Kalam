@@ -36,25 +36,20 @@ export function AppShell({
           <button
             type="button"
             onClick={() => router.push(user.role === 'MANAGER' ? '/manager' : '/dashboard')}
-            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left"
+            className="rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors px-4 py-3 text-left shadow-sm"
           >
-            <div className="flex size-10 items-center justify-center rounded-2xl bg-slate-900 text-white">
-              KS
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900">Kalam OCR</p>
-              <p className="text-xs text-slate-500">Invoice operations workspace</p>
-            </div>
+            <p className="text-base font-bold tracking-tight text-slate-900">Automator</p>
+            <p className="text-xs text-slate-500">Invoice operations workspace</p>
           </button>
 
-          <div className="mt-6 rounded-3xl bg-slate-950 px-4 py-4 text-white">
-            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">Signed in as</p>
+          <div className="mt-6 rounded-3xl border border-slate-200 bg-white shadow-sm px-4 py-4 text-slate-900">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-500">Signed in as</p>
             <p className="mt-2 text-lg font-semibold">{user.name}</p>
-            <p className="text-sm text-slate-300">{user.email}</p>
-            <div className="mt-4 flex items-center gap-2 text-xs font-medium text-slate-100">
-              <span className="rounded-full bg-white/10 px-3 py-1">{user.role}</span>
+            <p className="text-sm text-slate-500">{user.email}</p>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-700">
+              <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1">{user.role}</span>
               {user.isOwner ? (
-                <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-emerald-200">OWNER</span>
+                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-emerald-700">OWNER</span>
               ) : null}
             </div>
           </div>
@@ -69,8 +64,8 @@ export function AppShell({
                   className={cn(
                     "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-slate-900 text-white"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                      ? "bg-slate-100 text-slate-900"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
                   )}
                 >
                   {item.label}

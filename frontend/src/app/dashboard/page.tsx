@@ -70,7 +70,7 @@ export default function DashboardPage() {
         actions={
           <Button
             onClick={() => router.push('/create-invoice')}
-            className="rounded-2xl bg-slate-900 px-6 text-white hover:bg-slate-700"
+            className="rounded-2xl bg-white px-6 text-slate-900 border border-slate-200 shadow-sm hover:bg-slate-50"
           >
             <FileText className="mr-2 h-4 w-4" />
             Create &amp; Pay Invoice
@@ -79,67 +79,67 @@ export default function DashboardPage() {
       >
         <section className="space-y-6">
 
-        {uploadError && (
-          <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center space-x-3 text-rose-900 shadow-sm">
-            <p className="font-semibold text-sm flex-1">{uploadError}</p>
-            <Button variant="ghost" className="text-rose-900 hover:bg-rose-100 rounded-full h-8 px-3 font-medium" onClick={() => setUploadError(null)}>Dismiss</Button>
-          </div>
-        )}
-
-        {pageError && (
-          <div className="mb-8 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center space-x-3 text-amber-900 shadow-sm">
-            <p className="font-semibold text-sm flex-1">{pageError}</p>
-            <Button variant="ghost" className="text-amber-900 hover:bg-amber-100 rounded-full h-8 px-3 font-medium" onClick={fetchInvoices}>Retry</Button>
-          </div>
-        )}
-
-        <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-          <FileUpload
-            onUploadSuccess={onUploadSuccess}
-            onUploadError={onUploadError}
-          />
-        </div>
-
-        {/* Recent Documents Grid */}
-        <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
-          <h2 className="text-xl font-bold mb-6 flex items-center text-black">
-            <FileText className="w-5 h-5 mr-2 text-slate-400" />
-            Recent Documents
-          </h2>
-
-          {isLoading ? (
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white border border-slate-100 rounded-2xl p-6 h-44 animate-pulse">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-12 h-12 bg-slate-100 rounded-xl" />
-                    <div className="w-20 h-6 bg-slate-100 rounded-full" />
-                  </div>
-                  <div className="w-3/4 h-5 bg-slate-100 rounded mb-4" />
-                  <div className="w-1/2 h-4 bg-slate-100 rounded" />
-                </div>
-              ))}
-            </div>
-          ) : invoices.length > 0 ? (
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
-              {invoices.map((invoice) => (
-                <InvoiceCard
-                  key={invoice.id}
-                  invoice={invoice}
-                  onClick={() => router.push(`/results/${invoice.id}`)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="border-2 border-slate-200 border-dashed rounded-3xl h-64 flex items-center justify-center text-slate-500 flex-col bg-white">
-              <div className="p-4 bg-slate-50 rounded-full mb-4">
-                <FileText className="w-10 h-10 opacity-20 text-slate-900" />
-              </div>
-              <p className="text-sm font-semibold text-slate-900">No documents yet</p>
-              <p className="text-xs text-slate-500 mt-1">Upload an invoice to see it here</p>
+          {uploadError && (
+            <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center space-x-3 text-rose-900 shadow-sm">
+              <p className="font-semibold text-sm flex-1">{uploadError}</p>
+              <Button variant="ghost" className="text-rose-900 hover:bg-rose-100 rounded-full h-8 px-3 font-medium" onClick={() => setUploadError(null)}>Dismiss</Button>
             </div>
           )}
-        </div>
+
+          {pageError && (
+            <div className="mb-8 p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-center space-x-3 text-amber-900 shadow-sm">
+              <p className="font-semibold text-sm flex-1">{pageError}</p>
+              <Button variant="ghost" className="text-amber-900 hover:bg-amber-100 rounded-full h-8 px-3 font-medium" onClick={fetchInvoices}>Retry</Button>
+            </div>
+          )}
+
+          <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+            <FileUpload
+              onUploadSuccess={onUploadSuccess}
+              onUploadError={onUploadError}
+            />
+          </div>
+
+          {/* Recent Documents Grid */}
+          <div className="rounded-[28px] border border-slate-200 bg-white p-8 shadow-sm">
+            <h2 className="text-xl font-bold mb-6 flex items-center text-black">
+              <FileText className="w-5 h-5 mr-2 text-slate-400" />
+              Recent Documents
+            </h2>
+
+            {isLoading ? (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="bg-white border border-slate-100 rounded-2xl p-6 h-44 animate-pulse">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 bg-slate-100 rounded-xl" />
+                      <div className="w-20 h-6 bg-slate-100 rounded-full" />
+                    </div>
+                    <div className="w-3/4 h-5 bg-slate-100 rounded mb-4" />
+                    <div className="w-1/2 h-4 bg-slate-100 rounded" />
+                  </div>
+                ))}
+              </div>
+            ) : invoices.length > 0 ? (
+              <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+                {invoices.map((invoice) => (
+                  <InvoiceCard
+                    key={invoice.id}
+                    invoice={invoice}
+                    onClick={() => router.push(`/results/${invoice.id}`)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="border-2 border-slate-200 border-dashed rounded-3xl h-64 flex items-center justify-center text-slate-500 flex-col bg-white">
+                <div className="p-4 bg-slate-50 rounded-full mb-4">
+                  <FileText className="w-10 h-10 opacity-20 text-slate-900" />
+                </div>
+                <p className="text-sm font-semibold text-slate-900">No documents yet</p>
+                <p className="text-xs text-slate-500 mt-1">Upload an invoice to see it here</p>
+              </div>
+            )}
+          </div>
         </section>
       </AppShell>
     </RoleProtected>

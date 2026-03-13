@@ -28,7 +28,7 @@ export function InvoiceCard({ invoice, onClick }: InvoiceCardProps) {
   };
 
   return (
-    <div 
+    <div
       onClick={onClick}
       className="group bg-white border border-slate-200 rounded-2xl p-5 hover:border-slate-400 hover:shadow-sm transition-all cursor-pointer"
     >

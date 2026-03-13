@@ -25,7 +25,7 @@ export default function Home() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-slate-200 relative overflow-hidden font-sans">
       {/* Navigation */}

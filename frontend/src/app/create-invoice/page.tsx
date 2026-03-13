@@ -385,236 +385,234 @@ export default function CreateInvoicePage() {
   // ── Form ─────────────────────────────────────────────────────────────────────
   return (
     <RoleProtected mode="employee">
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-4">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
-          </button>
-          <span className="font-bold text-lg text-slate-900">Create Invoice</span>
-        </div>
-      </nav>
-
-      <main className="pt-24 pb-20 px-6 max-w-5xl mx-auto space-y-8">
-        {/* ── Supplier ──────────────────────────────────── */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Supplier Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Business Name *">
-              <input
-                className={inputCls}
-                placeholder="ABC Textiles"
-                value={supplier.name}
-                onChange={(e) => setSupplier((s) => ({ ...s, name: e.target.value }))}
-              />
-            </Field>
-            <Field label="GSTIN *">
-              <input
-                className={inputCls}
-                placeholder="33ABCDE1234F1Z5"
-                value={supplier.gstin}
-                onChange={(e) => setSupplier((s) => ({ ...s, gstin: e.target.value.toUpperCase() }))}
-                maxLength={15}
-              />
-            </Field>
-            <Field label="Address">
-              <input
-                className={inputCls}
-                placeholder="Tiruppur, Tamil Nadu"
-                value={supplier.address}
-                onChange={(e) => setSupplier((s) => ({ ...s, address: e.target.value }))}
-              />
-            </Field>
-            <Field label="Phone">
-              <input
-                className={inputCls}
-                placeholder="9XXXXXXXXX"
-                value={supplier.phone}
-                onChange={(e) => setSupplier((s) => ({ ...s, phone: e.target.value }))}
-              />
-            </Field>
-          </div>
-        </section>
-
-        {/* ── Invoice Meta ──────────────────────────────── */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Invoice Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Invoice Number">
-              <input
-                className={inputCls}
-                value={meta.invoiceNumber}
-                onChange={(e) => setMeta((m) => ({ ...m, invoiceNumber: e.target.value }))}
-              />
-            </Field>
-            <Field label="Invoice Date">
-              <input
-                type="date"
-                className={inputCls}
-                value={meta.invoiceDate}
-                onChange={(e) => setMeta((m) => ({ ...m, invoiceDate: e.target.value }))}
-              />
-            </Field>
-            <Field label="Place of Supply">
-              <input
-                className={inputCls}
-                placeholder="Tamil Nadu"
-                value={meta.placeOfSupply}
-                onChange={(e) => setMeta((m) => ({ ...m, placeOfSupply: e.target.value }))}
-              />
-            </Field>
-            <Field label="Payment Terms">
-              <input
-                className={inputCls}
-                placeholder="15 days"
-                value={meta.paymentTerms}
-                onChange={(e) => setMeta((m) => ({ ...m, paymentTerms: e.target.value }))}
-              />
-            </Field>
-          </div>
-          {/* Tax type toggle */}
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500 font-medium">GST type:</span>
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        {/* Nav */}
+        <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
+          <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-4">
             <button
-              type="button"
-              onClick={() => setTaxType("intra")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                taxType === "intra"
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
+              onClick={() => router.push("/dashboard")}
+              className="p-2 rounded-full hover:bg-slate-100 transition-colors"
             >
-              Intra-state (CGST+SGST)
+              <ArrowLeft className="w-5 h-5 text-slate-600" />
             </button>
-            <button
-              type="button"
-              onClick={() => setTaxType("inter")}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                taxType === "inter"
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              Inter-state (IGST)
-            </button>
+            <span className="font-bold text-lg text-slate-900">Create Invoice</span>
           </div>
-        </section>
+        </nav>
 
-        {/* ── Line Items ────────────────────────────────── */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Line Items</h2>
+        <main className="pt-24 pb-20 px-6 max-w-5xl mx-auto space-y-8">
+          {/* ── Supplier ──────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Supplier Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Business Name *">
+                <input
+                  className={inputCls}
+                  placeholder="ABC Textiles"
+                  value={supplier.name}
+                  onChange={(e) => setSupplier((s) => ({ ...s, name: e.target.value }))}
+                />
+              </Field>
+              <Field label="GSTIN *">
+                <input
+                  className={inputCls}
+                  placeholder="33ABCDE1234F1Z5"
+                  value={supplier.gstin}
+                  onChange={(e) => setSupplier((s) => ({ ...s, gstin: e.target.value.toUpperCase() }))}
+                  maxLength={15}
+                />
+              </Field>
+              <Field label="Address">
+                <input
+                  className={inputCls}
+                  placeholder="Tiruppur, Tamil Nadu"
+                  value={supplier.address}
+                  onChange={(e) => setSupplier((s) => ({ ...s, address: e.target.value }))}
+                />
+              </Field>
+              <Field label="Phone">
+                <input
+                  className={inputCls}
+                  placeholder="9XXXXXXXXX"
+                  value={supplier.phone}
+                  onChange={(e) => setSupplier((s) => ({ ...s, phone: e.target.value }))}
+                />
+              </Field>
+            </div>
+          </section>
 
-          {/* Header row */}
-          <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-3 text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">
-            <span>Item Name</span><span>HSN</span><span>Qty</span><span>UOM</span><span>Rate (₹)</span><span />
-          </div>
-
-          {items.map((item, i) => (
-            <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-3 items-center">
-              <input
-                className={inputCls}
-                placeholder="Cotton Fabric"
-                value={item.name}
-                onChange={(e) => updateItem(i, "name", e.target.value)}
-              />
-              <input
-                className={inputCls}
-                placeholder="5208"
-                value={item.hsn}
-                onChange={(e) => updateItem(i, "hsn", e.target.value)}
-              />
-              <input
-                type="number"
-                min={0}
-                className={inputCls}
-                value={item.qty}
-                onChange={(e) => updateItem(i, "qty", parseFloat(e.target.value) || 0)}
-              />
-              <input
-                className={inputCls}
-                placeholder="mtr"
-                value={item.uom}
-                onChange={(e) => updateItem(i, "uom", e.target.value)}
-              />
-              <input
-                type="number"
-                min={0}
-                className={inputCls}
-                placeholder="0.00"
-                value={item.rate}
-                onChange={(e) => updateItem(i, "rate", parseFloat(e.target.value) || 0)}
-              />
+          {/* ── Invoice Meta ──────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Invoice Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Invoice Number">
+                <input
+                  className={inputCls}
+                  value={meta.invoiceNumber}
+                  onChange={(e) => setMeta((m) => ({ ...m, invoiceNumber: e.target.value }))}
+                />
+              </Field>
+              <Field label="Invoice Date">
+                <input
+                  type="date"
+                  className={inputCls}
+                  value={meta.invoiceDate}
+                  onChange={(e) => setMeta((m) => ({ ...m, invoiceDate: e.target.value }))}
+                />
+              </Field>
+              <Field label="Place of Supply">
+                <input
+                  className={inputCls}
+                  placeholder="Tamil Nadu"
+                  value={meta.placeOfSupply}
+                  onChange={(e) => setMeta((m) => ({ ...m, placeOfSupply: e.target.value }))}
+                />
+              </Field>
+              <Field label="Payment Terms">
+                <input
+                  className={inputCls}
+                  placeholder="15 days"
+                  value={meta.paymentTerms}
+                  onChange={(e) => setMeta((m) => ({ ...m, paymentTerms: e.target.value }))}
+                />
+              </Field>
+            </div>
+            {/* Tax type toggle */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-500 font-medium">GST type:</span>
               <button
-                onClick={() => removeItem(i)}
-                disabled={items.length === 1}
-                className="p-2 text-slate-400 hover:text-rose-500 disabled:opacity-30 transition-colors"
+                type="button"
+                onClick={() => setTaxType("intra")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${taxType === "intra"
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
               >
-                <Trash2 className="w-4 h-4" />
+                Intra-state (CGST+SGST)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaxType("inter")}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${taxType === "inter"
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+              >
+                Inter-state (IGST)
               </button>
             </div>
-          ))}
+          </section>
 
-          {/* Per-item amount display */}
-          {items.map((item, i) => (
-            <div key={`amt-${i}`} className="flex justify-between text-sm text-slate-500 px-1 -mt-2 border-b border-slate-50 pb-2">
-              <span className="text-xs text-slate-400">{item.name || `Item ${i + 1}`}</span>
-              <span className="font-medium text-slate-700">₹ {fmt(item.amount)}</span>
+          {/* ── Line Items ────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">Line Items</h2>
+
+            {/* Header row */}
+            <div className="hidden sm:grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-3 text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">
+              <span>Item Name</span><span>HSN</span><span>Qty</span><span>UOM</span><span>Rate (₹)</span><span />
             </div>
-          ))}
 
-          <button
-            onClick={addItem}
-            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors py-1"
-          >
-            <Plus className="w-4 h-4" /> Add item
-          </button>
-        </section>
+            {items.map((item, i) => (
+              <div key={i} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_auto] gap-3 items-center">
+                <input
+                  className={inputCls}
+                  placeholder="Cotton Fabric"
+                  value={item.name}
+                  onChange={(e) => updateItem(i, "name", e.target.value)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="5208"
+                  value={item.hsn}
+                  onChange={(e) => updateItem(i, "hsn", e.target.value)}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  className={inputCls}
+                  value={item.qty}
+                  onChange={(e) => updateItem(i, "qty", parseFloat(e.target.value) || 0)}
+                />
+                <input
+                  className={inputCls}
+                  placeholder="mtr"
+                  value={item.uom}
+                  onChange={(e) => updateItem(i, "uom", e.target.value)}
+                />
+                <input
+                  type="number"
+                  min={0}
+                  className={inputCls}
+                  placeholder="0.00"
+                  value={item.rate}
+                  onChange={(e) => updateItem(i, "rate", parseFloat(e.target.value) || 0)}
+                />
+                <button
+                  onClick={() => removeItem(i)}
+                  disabled={items.length === 1}
+                  className="p-2 text-slate-400 hover:text-rose-500 disabled:opacity-30 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
 
-        {/* ── Totals ────────────────────────────────────── */}
-        <section className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Totals</h2>
-          <div className="ml-auto max-w-xs space-y-2 text-sm">
-            <TotalRow label="Sub Total" value={subTotal} />
-            {taxType === "intra" ? (
-              <>
-                <TotalRow label="CGST (9%)" value={cgst} />
-                <TotalRow label="SGST (9%)" value={sgst} />
-              </>
-            ) : (
-              <TotalRow label="IGST (18%)" value={igst} />
-            )}
-            <div className="flex justify-between font-bold text-base text-slate-900 border-t border-slate-200 pt-2">
-              <span>Grand Total</span>
-              <span>₹ {fmt(grandTotal)}</span>
+            {/* Per-item amount display */}
+            {items.map((item, i) => (
+              <div key={`amt-${i}`} className="flex justify-between text-sm text-slate-500 px-1 -mt-2 border-b border-slate-50 pb-2">
+                <span className="text-xs text-slate-400">{item.name || `Item ${i + 1}`}</span>
+                <span className="font-medium text-slate-700">₹ {fmt(item.amount)}</span>
+              </div>
+            ))}
+
+            <button
+              onClick={addItem}
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 transition-colors py-1"
+            >
+              <Plus className="w-4 h-4" /> Add item
+            </button>
+          </section>
+
+          {/* ── Totals ────────────────────────────────────── */}
+          <section className="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Totals</h2>
+            <div className="ml-auto max-w-xs space-y-2 text-sm">
+              <TotalRow label="Sub Total" value={subTotal} />
+              {taxType === "intra" ? (
+                <>
+                  <TotalRow label="CGST (9%)" value={cgst} />
+                  <TotalRow label="SGST (9%)" value={sgst} />
+                </>
+              ) : (
+                <TotalRow label="IGST (18%)" value={igst} />
+              )}
+              <div className="flex justify-between font-bold text-base text-slate-900 border-t border-slate-200 pt-2">
+                <span>Grand Total</span>
+                <span>₹ {fmt(grandTotal)}</span>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ── Error ─────────────────────────────────────── */}
-        {error && (
-          <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-rose-800 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* ── Pay Button ────────────────────────────────── */}
-        <Button
-          onClick={handlePay}
-          disabled={loading || !canPay}
-          className="w-full h-14 text-base font-semibold bg-slate-900 hover:bg-slate-700 text-white rounded-2xl shadow-lg disabled:bg-slate-300 disabled:text-slate-500 disabled:hover:bg-slate-300"
-        >
-          {loading ? (
-            <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Processing…</>
-          ) : (
-            <><IndianRupee className="w-5 h-5 mr-2" /> Pay ₹ {fmt(grandTotal)} & Generate Invoice</>
+          {/* ── Error ─────────────────────────────────────── */}
+          {error && (
+            <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-rose-800 text-sm">
+              {error}
+            </div>
           )}
-        </Button>
-      </main>
-    </div>
+
+          {/* ── Pay Button ────────────────────────────────── */}
+          <Button
+            onClick={handlePay}
+            disabled={loading || !canPay}
+            className="w-full h-14 text-base font-semibold bg-slate-900 hover:bg-slate-700 text-white rounded-2xl shadow-lg disabled:bg-slate-300 disabled:text-slate-500 disabled:hover:bg-slate-300"
+          >
+            {loading ? (
+              <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Processing…</>
+            ) : (
+              <><IndianRupee className="w-5 h-5 mr-2" /> Pay ₹ {fmt(grandTotal)} & Generate Invoice</>
+            )}
+          </Button>
+        </main>
+      </div>
     </RoleProtected>
   );
 }

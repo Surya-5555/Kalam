@@ -72,32 +72,32 @@ const InvoicePreviewPanel = dynamic(
 
 function DocumentMetaCard({ doc }: { doc: InvoiceDocument }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5 space-y-4">
       <div className="flex items-start gap-3">
         <div className="p-2.5 bg-slate-100 rounded-xl shrink-0">
-          <FileText className="w-5 h-5 text-slate-600" />
+          <FileText className="w-5 h-5 text-slate-500" />
         </div>
         <div className="min-w-0">
           <p
-            className="text-sm font-semibold text-slate-900 break-all leading-tight"
+            className="text-sm font-bold text-slate-900 break-all leading-tight tracking-tight"
             title={doc.originalName}
           >
             {doc.originalName}
           </p>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs font-medium text-slate-500/70 mt-0.5">
             {(doc.fileSize / 1024).toFixed(1)} KB &middot; {doc.mimeType}
           </p>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500 font-medium">Status</span>
+        <span className="text-xs text-slate-500 font-semibold">Status</span>
         <StatusBadge status={doc.status} />
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500 font-medium">Uploaded</span>
-        <span className="text-xs text-slate-700 font-mono">
+        <span className="text-xs text-slate-500 font-semibold">Uploaded</span>
+        <span className="text-xs text-slate-900 font-mono font-medium">
           {new Date(doc.uploadedAt).toLocaleDateString("en-IN", {
             day: "2-digit",
             month: "short",
@@ -107,8 +107,8 @@ function DocumentMetaCard({ doc }: { doc: InvoiceDocument }) {
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500 font-medium">Last updated</span>
-        <span className="text-xs text-slate-700 font-mono">
+        <span className="text-xs text-slate-500 font-semibold">Last updated</span>
+        <span className="text-xs text-slate-900 font-mono font-medium">
           {new Date(doc.updatedAt).toLocaleDateString("en-IN", {
             day: "2-digit",
             month: "short",
@@ -126,78 +126,78 @@ function ExtractionQualityCard({ data }: { data: StoredPipelineResult }) {
   const pct = Math.round((data.metadata?.overallConfidence ?? 0) * 100);
   const color =
     pct >= 85
-      ? "text-emerald-600"
+      ? "text-slate-900"
       : pct >= 60
-        ? "text-amber-600"
-        : "text-rose-600";
+        ? "text-slate-500"
+        : "text-slate-500";
   const barColor =
     pct >= 85
-      ? "bg-emerald-500"
+      ? "bg-primary"
       : pct >= 60
-        ? "bg-amber-400"
-        : "bg-rose-400";
+        ? "bg-primary/80"
+        : "bg-primary/50";
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5 space-y-3">
       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
         Extraction Quality
       </p>
 
       <div className="flex items-end justify-between">
-        <span className={`text-3xl font-bold tabular-nums ${color}`}>
+        <span className={`text-3xl font-bold tabular-nums tracking-tight ${color}`}>
           {pct}%
         </span>
         <span
-          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
             data.status === "completed"
-              ? "bg-emerald-100 text-emerald-700"
+              ? "bg-slate-100 text-slate-900 border-slate-200"
               : data.status === "partial"
-                ? "bg-amber-100 text-amber-700"
-                : "bg-rose-100 text-rose-700"
+                ? "bg-slate-100 text-slate-900 border-slate-200"
+                : "bg-slate-100 text-slate-900 border-slate-200"
           }`}
         >
           {data.status === "completed" ? "success" : data.status}
         </span>
       </div>
 
-      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden ring-1 ring-inset ring-border/20">
         <div
           className={`h-full rounded-full transition-all ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
-      <div className="space-y-1.5 pt-1">
+      <div className="space-y-2 pt-2">
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-500">Model</span>
-          <span className="text-slate-700 font-mono text-[11px]">
+          <span className="text-slate-500 font-medium">Model</span>
+          <span className="text-slate-900 font-mono text-[11px] font-medium">
             {data.metadata?.extractionModel ?? "—"}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-500">Source method</span>
-          <span className="text-slate-700 font-mono text-[11px]">
+          <span className="text-slate-500 font-medium">Source method</span>
+          <span className="text-slate-900 font-mono text-[11px] font-medium">
             {data.metadata?.extractionMethod ?? "—"}
           </span>
         </div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-slate-500">Source chars</span>
-          <span className="text-slate-700 font-mono text-[11px]">
+          <span className="text-slate-500 font-medium">Source chars</span>
+          <span className="text-slate-900 font-mono text-[11px] font-medium">
             {(data.metadata?.sourceTextLength ?? 0).toLocaleString()}
           </span>
         </div>
       </div>
 
       {data.warnings && data.warnings.length > 0 && (
-        <div className="pt-2 border-t border-slate-100 space-y-1">
+        <div className="pt-3 border-t border-slate-100 mt-3 space-y-1.5">
           {data.warnings.slice(0, 3).map((w, i) => (
-            <p key={i} className="text-[11px] text-amber-700 flex gap-1">
-              <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-              {w.message}
+            <p key={i} className="text-[11px] text-slate-500 font-medium flex gap-1.5 items-start">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span className="leading-tight">{w.message}</span>
             </p>
           ))}
           {data.warnings.length > 3 && (
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] font-semibold text-slate-500 tracking-wide">
               +{data.warnings.length - 3} more
             </p>
           )}
@@ -234,17 +234,17 @@ function InvoiceSummaryCard({ inv }: { inv: NormalizedInvoice }) {
   const amountValue = inv.totals.amountDue ?? inv.totals.grandTotal;
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
+    <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5 space-y-3">
       <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-        Invoice
+        Invoice Summary
       </p>
 
       <div className="flex items-start justify-between gap-2">
-        <p className="text-base font-bold text-slate-900 truncate">
+        <p className="text-lg font-bold text-slate-900 truncate tracking-tight">
           {h.number ?? "—"}
         </p>
         {h.date.normalized && (
-          <p className="text-xs text-slate-400 shrink-0">
+          <p className="text-xs font-medium text-slate-500 shrink-0 mt-1">
             {new Date(h.date.normalized).toLocaleDateString("en-IN", {
               day: "2-digit",
               month: "short",
@@ -254,31 +254,31 @@ function InvoiceSummaryCard({ inv }: { inv: NormalizedInvoice }) {
         )}
       </div>
 
-      <div className="pt-2 space-y-2 border-t border-slate-100">
+      <div className="pt-3 space-y-3 border-t border-slate-100">
         <div>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
             From
           </p>
-          <p className="text-xs font-semibold text-slate-900 truncate">
+          <p className="text-sm font-bold text-slate-900 truncate">
             {inv.supplier.name ?? "—"}
           </p>
         </div>
         <div>
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-0.5">
             To
           </p>
-          <p className="text-xs font-semibold text-slate-900 truncate">
+          <p className="text-sm font-bold text-slate-900 truncate">
             {inv.buyer.name ?? "—"}
           </p>
         </div>
       </div>
 
       {amountValue != null && (
-        <div className="pt-3 border-t border-slate-100">
-          <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">
+        <div className="pt-4 border-t border-slate-100 mt-1">
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
             {amountLabel}
           </p>
-          <p className="text-2xl font-bold tabular-nums text-slate-900">
+          <p className="text-3xl font-bold tabular-nums tracking-tight text-primary">
             {fmt(amountValue)}
           </p>
         </div>
@@ -297,7 +297,7 @@ function SchemaRepairsCard({ data }: { data: StoredPipelineResult }) {
     <SectionCard
       title="Schema Repairs"
       badge={
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700 border border-amber-200">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-900 border border-slate-200">
           {repairs.length}
         </span>
       }
@@ -305,9 +305,9 @@ function SchemaRepairsCard({ data }: { data: StoredPipelineResult }) {
       <div className="space-y-1.5">
         {repairs.map((r, i) => (
           <div key={i} className="flex gap-2 text-xs">
-            <span className="font-mono text-slate-600 shrink-0">{r.field}</span>
-            <span className="text-slate-400">—</span>
-            <span className="text-amber-700">{r.detail}</span>
+            <span className="font-mono text-slate-500 shrink-0">{r.field}</span>
+            <span className="text-slate-500/50">—</span>
+            <span className="text-slate-900">{r.detail}</span>
           </div>
         ))}
       </div>
@@ -321,21 +321,21 @@ function NoDataState({ doc }: { doc: InvoiceDocument }) {
   const router = useRouter();
   return (
     <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
-      <div className="p-4 bg-slate-100 rounded-full mb-4">
-        <FileText className="w-10 h-10 text-slate-400" />
+      <div className="p-5 bg-slate-100 rounded-full mb-5 ring-1 ring-border/50">
+        <FileText className="w-10 h-10 text-slate-500" />
       </div>
-      <h2 className="text-lg font-bold text-slate-800 mb-2">
+      <h2 className="text-xl font-bold text-slate-900 mb-2 tracking-tight">
         No extraction data available
       </h2>
-      <p className="text-sm text-slate-500 max-w-sm mb-6">
+      <p className="text-sm font-medium text-slate-500 max-w-sm mb-6">
         {doc.status === "processing"
           ? "This invoice is still being processed. Check back soon."
           : doc.status === "failed"
             ? "Processing failed for this invoice. No data could be extracted."
             : "No extracted data was found for this invoice."}
       </p>
-      <Button variant="outline" onClick={() => router.push("/dashboard")}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
+      <Button variant="outline" className="border-slate-200 text-slate-900 hover:bg-slate-100 rounded-xl font-semibold h-11 transition-all" onClick={() => router.push("/dashboard")}>
+        <ArrowLeft className="w-5 h-5 mr-2" />
         Back to Dashboard
       </Button>
     </div>
@@ -371,19 +371,20 @@ export default function ResultsPage() {
   if (loading) {
     return (
       <RoleProtected mode="employee">
-      <div className="min-h-screen bg-slate-50 font-sans">
-        <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
+      <div className="min-h-screen bg-slate-50 font-sans relative overflow-x-hidden">
+        <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+        <nav className="fixed top-0 w-full z-50 border-b border-slate-100 bg-slate-50/80 backdrop-blur-xl">
           <div className="max-w-7xl mx-auto px-6 h-16 flex items-center">
-            <div className="w-32 h-5 bg-slate-100 rounded animate-pulse" />
+            <div className="w-32 h-6 bg-slate-100 rounded-md animate-pulse" />
           </div>
         </nav>
-        <main className="pt-28 pb-16 px-6 max-w-7xl mx-auto">
+        <main className="pt-28 pb-16 px-6 max-w-7xl mx-auto relative z-10">
           <div className="grid lg:grid-cols-[360px_1fr] gap-6">
             <div className="space-y-4">
               {[100, 140, 220].map((h) => (
                 <div
                   key={h}
-                  className="bg-white border border-slate-200 rounded-2xl animate-pulse"
+                  className="bg-white border border-slate-200 rounded-[2.5rem] animate-pulse shadow-sm"
                   style={{ height: h }}
                 />
               ))}
@@ -392,7 +393,7 @@ export default function ResultsPage() {
               {[80, 180, 300, 240, 100].map((h, i) => (
                 <div
                   key={i}
-                  className="bg-white border border-slate-200 rounded-2xl animate-pulse"
+                  className="bg-white border border-slate-200 rounded-[2.5rem] animate-pulse shadow-sm"
                   style={{ height: h }}
                 />
               ))}
@@ -409,13 +410,15 @@ export default function ResultsPage() {
     return (
       <RoleProtected mode="employee">
       <div className="min-h-screen bg-slate-50 font-sans flex items-center justify-center px-6">
-        <div className="text-center space-y-4">
-          <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
-          <p className="text-slate-700 font-medium">
+        <div className="text-center space-y-5">
+          <div className="p-4 bg-rose-50 inline-flex rounded-full ring-1 ring-destructive/20 mx-auto">
+            <AlertCircle className="w-10 h-10 text-rose-600" />
+          </div>
+          <p className="text-slate-900 font-bold tracking-tight text-xl">
             {error ?? "Invoice not found"}
           </p>
-          <Button variant="outline" onClick={() => router.push("/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <Button variant="outline" className="border-slate-200 text-slate-900 hover:bg-slate-100 rounded-xl font-semibold h-11 transition-all" onClick={() => router.push("/dashboard")}>
+            <ArrowLeft className="w-5 h-5 mr-2" />
             Dashboard
           </Button>
         </div>
@@ -430,19 +433,22 @@ export default function ResultsPage() {
 
   return (
     <RoleProtected mode="employee">
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans relative overflow-x-hidden">
+      <div className="fixed top-[10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-accent/5 blur-[120px] pointer-events-none" />
+
       {/* Nav */}
-      <nav className="fixed top-0 w-full z-50 border-b border-slate-200/50 bg-white/70 backdrop-blur-xl">
+      <nav className="fixed top-0 w-full z-50 border-b border-slate-100 bg-slate-50/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div
-            className="flex items-center gap-2 font-bold text-xl text-slate-900 cursor-pointer"
+            className="flex items-center gap-2 font-bold text-xl tracking-tight text-slate-900 cursor-pointer"
             onClick={() => router.push("/")}
           >
             <span>Automator</span>
           </div>
           <Button
             variant="ghost"
-            className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full"
+            className="text-slate-500 hover:text-slate-900 hover:bg-slate-100 font-semibold rounded-xl"
             onClick={() => router.push("/dashboard")}
           >
             <ArrowLeft className="size-4 mr-2" />
@@ -451,24 +457,24 @@ export default function ResultsPage() {
         </div>
       </nav>
 
-      <main className="pt-24 pb-16 px-6 max-w-7xl mx-auto">
+      <main className="pt-24 pb-16 px-6 max-w-7xl mx-auto relative z-10">
         {/* Page header */}
-        <div className="mb-8">
+        <div className="mb-8 p-6 bg-white border border-slate-200 rounded-[2.5rem] shadow-sm">
           <button
             onClick={() => router.push("/dashboard")}
-            className="mb-4 flex items-center gap-1.5 text-sm text-slate-500 transition-colors hover:text-slate-900"
+            className="mb-4 flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-slate-900 inline-flex bg-slate-100 px-3 py-1.5 rounded-lg"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Dashboard
+            <ArrowLeft className="h-4 w-4" />
+            Back to Dashboard
           </button>
 
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Invoice Results
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+                <span className="w-6 h-px bg-border/80" /> Invoice Results
               </p>
               <h1
-                className="truncate text-2xl font-bold text-slate-900"
+                className="truncate text-3xl font-bold tracking-tight text-slate-900"
                 title={doc.originalName}
               >
                 {doc.originalName}
@@ -480,24 +486,25 @@ export default function ResultsPage() {
           </div>
 
           {extracted && (
-            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-y-2">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                <span className="flex items-center gap-1.5 text-sm text-slate-500">
-                  <Zap className="h-3.5 w-3.5" />
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-y-2 pt-4 border-t border-slate-100">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border border-slate-100 bg-slate-50 rounded-xl px-4 py-2">
+                <span className="flex items-center gap-1.5 text-sm font-bold text-slate-500">
+                  <Zap className="h-4 w-4 text-primary" />
                   {Math.round((extracted.metadata?.overallConfidence ?? 0) * 100)}% confidence
                 </span>
+                <span className="w-px h-4 bg-border/60 hidden sm:block" />
                 {extracted.validation && (
                   <span
-                    className={`flex items-center gap-1.5 text-sm font-medium ${
+                    className={`flex items-center gap-1.5 text-sm font-bold tracking-tight ${
                       extracted.validation.isValid
-                        ? "text-emerald-600"
-                        : "text-rose-600"
+                        ? "text-slate-900"
+                        : "text-slate-900"
                     }`}
                   >
                     {extracted.validation.isValid ? (
-                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <CheckCircle2 className="h-4 w-4" />
                     ) : (
-                      <AlertCircle className="h-3.5 w-3.5" />
+                      <AlertCircle className="h-4 w-4" />
                     )}
                     {extracted.validation.isValid
                       ? "Passed validation"

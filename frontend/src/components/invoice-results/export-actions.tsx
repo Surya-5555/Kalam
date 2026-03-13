@@ -52,13 +52,12 @@ export function ExportActions({
         variant="outline"
         size="sm"
         onClick={handleCopy}
-        className={`h-8 gap-1.5 rounded-lg text-xs font-medium transition-colors ${
-          copyState === "copied"
+        className={`h-8 gap-1.5 rounded-lg text-xs font-medium transition-colors ${copyState === "copied"
             ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50"
             : copyState === "error"
               ? "border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-50"
               : "border-slate-200 text-slate-600 hover:border-slate-300 hover:text-slate-900"
-        }`}
+          }`}
       >
         {copyState === "copied" ? (
           <>

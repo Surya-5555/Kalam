@@ -198,13 +198,13 @@ export function FileUpload({ onUploadSuccess, onUploadError }: FileUploadProps) 
         </Button>
         <Button
           type="button"
-          className="h-9 gap-2 rounded-lg bg-slate-900 px-5 text-sm font-semibold text-white shadow-none hover:bg-slate-800 disabled:opacity-60"
+          className="h-9 gap-2 rounded-lg bg-white border border-slate-200 px-5 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50 disabled:opacity-60"
           onClick={uploadFile}
           disabled={isUploading}
         >
           {isUploading ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-500" />
               Uploading…
             </>
           ) : (

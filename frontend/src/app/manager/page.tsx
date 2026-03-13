@@ -214,7 +214,7 @@ export default function ManagerPage() {
               <RefreshCcw className="mr-2 size-4" />
               Refresh
             </Button>
-            <Button className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800" onClick={() => router.push('/dashboard')}>
+            <Button className="rounded-2xl bg-white border border-slate-200 shadow-sm text-slate-900 hover:bg-slate-50" onClick={() => router.push('/dashboard')}>
               Employee workspace
             </Button>
           </>
@@ -235,15 +235,15 @@ export default function ManagerPage() {
             <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
               <label className="space-y-2 text-sm text-slate-600">
                 <span>Date from</span>
-                <input type="date" className="w-full rounded-2xl border border-slate-200 px-3 py-2.5" value={filters.dateFrom ?? ''} onChange={(event) => handleFilterChange('dateFrom', event.target.value)} />
+                <input type="date" className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900" value={filters.dateFrom ?? ''} onChange={(event) => handleFilterChange('dateFrom', event.target.value)} />
               </label>
               <label className="space-y-2 text-sm text-slate-600">
                 <span>Date to</span>
-                <input type="date" className="w-full rounded-2xl border border-slate-200 px-3 py-2.5" value={filters.dateTo ?? ''} onChange={(event) => handleFilterChange('dateTo', event.target.value)} />
+                <input type="date" className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900" value={filters.dateTo ?? ''} onChange={(event) => handleFilterChange('dateTo', event.target.value)} />
               </label>
               <label className="space-y-2 text-sm text-slate-600">
                 <span>Status</span>
-                <select className="w-full rounded-2xl border border-slate-200 px-3 py-2.5" value={filters.status ?? ''} onChange={(event) => handleFilterChange('status', event.target.value)}>
+                <select className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900" value={filters.status ?? ''} onChange={(event) => handleFilterChange('status', event.target.value)}>
                   <option value="">All statuses</option>
                   <option value="pending">Pending</option>
                   <option value="processing">Processing</option>
@@ -253,15 +253,15 @@ export default function ManagerPage() {
               </label>
               <label className="space-y-2 text-sm text-slate-600">
                 <span>Supplier</span>
-                <input className="w-full rounded-2xl border border-slate-200 px-3 py-2.5" placeholder="Supplier name" value={filters.supplier ?? ''} onChange={(event) => handleFilterChange('supplier', event.target.value)} />
+                <input className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 placeholder:text-slate-400" placeholder="Supplier name" value={filters.supplier ?? ''} onChange={(event) => handleFilterChange('supplier', event.target.value)} />
               </label>
               <label className="space-y-2 text-sm text-slate-600">
                 <span>Uploaded by</span>
-                <input className="w-full rounded-2xl border border-slate-200 px-3 py-2.5" placeholder="User ID" value={filters.uploadedBy ?? ''} onChange={(event) => handleFilterChange('uploadedBy', event.target.value ? Number(event.target.value) : undefined)} />
+                <input type="number" className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 placeholder:text-slate-400" placeholder="User ID" value={filters.uploadedBy || ''} onChange={(event) => handleFilterChange('uploadedBy', event.target.value ? Number(event.target.value) : undefined)} />
               </label>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
-              <Button className="rounded-2xl bg-slate-900 text-white hover:bg-slate-800" onClick={() => void applyFilters()}>
+              <Button className="rounded-2xl bg-white border border-slate-200 shadow-sm text-slate-900 hover:bg-slate-50" onClick={() => void applyFilters()}>
                 Apply filters
               </Button>
               <Button variant="outline" className="rounded-2xl border-slate-200" onClick={() => void resetFilters()}>

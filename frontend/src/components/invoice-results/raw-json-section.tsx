@@ -71,8 +71,8 @@ export function RawJsonSection({ data }: RawJsonSectionProps) {
               )}
             </Button>
           </div>
-          <div className="bg-slate-950 rounded-xl overflow-auto max-h-150 p-4">
-            <pre className="text-xs text-slate-200 font-mono leading-relaxed whitespace-pre">
+          <div className="bg-slate-100/80 rounded-xl overflow-auto border border-slate-200 shadow-inner max-h-[600px] p-5">
+            <pre className="text-[13px] text-slate-800 font-mono leading-relaxed whitespace-pre">
               {jsonStr}
             </pre>
           </div>

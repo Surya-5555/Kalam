@@ -6,6 +6,7 @@ import { OcrModule } from '../ocr/ocr.module';
 import { AiExtractionModule } from '../ai-extraction/ai-extraction.module';
 import { DuplicateDetectionModule } from '../duplicate-detection/duplicate-detection.module';
 import { ProcessingStatusModule } from '../processing-status/processing-status.module';
+import { InvoiceEnhancementsModule } from '../invoice-enhancements/invoice-enhancements.module';
 
 /**
  * InvoicePipelineModule
@@ -23,6 +24,7 @@ import { ProcessingStatusModule } from '../processing-status/processing-status.m
     AiExtractionModule,
     DuplicateDetectionModule,
     ProcessingStatusModule,
+    InvoiceEnhancementsModule,
   ],
   providers: [InvoicePipelineService],
   exports: [InvoicePipelineService],

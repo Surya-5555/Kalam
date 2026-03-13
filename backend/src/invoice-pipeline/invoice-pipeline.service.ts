@@ -10,6 +10,8 @@ import { DuplicateDetectionService } from '../duplicate-detection/duplicate-dete
 import { DuplicateDetectionResult } from '../duplicate-detection/dto/duplicate-detection-result.dto';
 import { ProcessingStatusService } from '../processing-status/processing-status.service';
 import { ProcessingStage } from '../processing-status/dto/processing-stage.dto';
+import { InvoiceEnhancementService } from '../invoice-enhancements/invoice-enhancement.service';
+import type { PipelineEnhancementContext } from '../invoice-enhancements/types/pipeline-enhancement-context.type';
 import type { NormalizedInvoice } from '../normalization/dto/normalized-invoice.dto';
 import type { InspectionResultDto } from '../inspection/dto/inspection-result.dto';
 import type { PipelineWarning } from '../common/pipeline-warning';
@@ -55,6 +57,7 @@ export class InvoicePipelineService {
     private readonly aiExtractionService: AiExtractionService,
     private readonly duplicateDetectionService: DuplicateDetectionService,
     private readonly processingStatusService: ProcessingStatusService,
+    private readonly invoiceEnhancementService: InvoiceEnhancementService,
   ) {}
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -73,6 +76,20 @@ export class InvoicePipelineService {
     const log = this.pipelineLogger.withDocId(documentId);
     const pipelineStart = Date.now();
     const stageTimings: StageTimings = {};
+    const enhancementContext: PipelineEnhancementContext = {
+      documentId,
+      userId,
+      fileBuffer,
+      workingBuffer: fileBuffer,
+      documentType: null,
+      inspectionResult,
+      textExtractionResult: null,
+      ocrResult: null,
+      aiResult: null,
+      duplicateDetection: null,
+      warnings: [],
+      metadata: {},
+    };
 
     // ── Stage runner helpers ───────────────────────────────────────────────
 
@@ -121,12 +138,39 @@ export class InvoicePipelineService {
         },
       );
 
+      currentStage = 'image_preprocessing';
+      if (
+        this.invoiceEnhancementService.isEnabled() &&
+        (inspectionResult.fileType === 'jpeg' || inspectionResult.fileType === 'png')
+      ) {
+        await runStage('image_preprocessing', async () => {
+          await this.invoiceEnhancementService.beforeDocumentType(
+            enhancementContext,
+          );
+        });
+        currentStage = 'orientation_correction';
+        await runStage('orientation_correction', async () => undefined, {
+          orientation:
+            enhancementContext.metadata.preprocessing?.orientationDegrees ?? 0,
+          deskewAngle:
+            enhancementContext.metadata.preprocessing?.deskewAngle ?? 0,
+        });
+      } else {
+        await skipStage('image_preprocessing', { enabled: false });
+        await skipStage('orientation_correction', { enabled: false });
+      }
+
       // ── Stage 2: document_type_detection ─────────────────────────────────
       currentStage = 'document_type_detection';
       const documentTypeResult = await runStage(
         'document_type_detection',
-        () => this.documentTypeService.detect(fileBuffer, inspectionResult.fileType),
+        () =>
+          this.documentTypeService.detect(
+            enhancementContext.workingBuffer,
+            inspectionResult.fileType,
+          ),
       );
+          enhancementContext.documentType = documentTypeResult.documentType;
 
       // ── Stage 3: text_extraction ──────────────────────────────────────────
       // Run for ALL PDFs, not just text-based ones.  Modern PDFs store text in
@@ -144,6 +188,7 @@ export class InvoicePipelineService {
           () => this.pdfTextExtractionService.extract(fileBuffer),
           { documentType: documentTypeResult.documentType },
         );
+        enhancementContext.textExtractionResult = textExtractionResult;
       } else {
         await skipStage('text_extraction', {
           documentType: documentTypeResult.documentType,
@@ -170,7 +215,7 @@ export class InvoicePipelineService {
       } else if (documentTypeResult.documentType === 'image-document') {
         ocrResult = await runStage(
           'ocr',
-          () => this.ocrService.recognizeImage(fileBuffer),
+          () => this.ocrService.recognizeImage(enhancementContext.workingBuffer),
           { ocrMode: 'image' },
         );
       } else {
@@ -182,8 +227,30 @@ export class InvoicePipelineService {
               : undefined,
         });
       }
+      enhancementContext.ocrResult = ocrResult;
+
+      currentStage = 'ocr_fallback';
+      if (
+        this.invoiceEnhancementService.isEnabled() &&
+        (needsOcr || documentTypeResult.documentType === 'image-document')
+      ) {
+        await runStage('ocr_fallback', async () => {
+          await this.invoiceEnhancementService.resolveOcr(enhancementContext);
+          ocrResult = enhancementContext.ocrResult;
+        });
+      } else {
+        await skipStage('ocr_fallback', { reason: 'ocr fallback not required' });
+      }
 
       // ── Stage 5: ai_extraction ────────────────────────────────────────────
+      if (this.invoiceEnhancementService.isEnabled()) {
+        await this.invoiceEnhancementService.beforeAiExtraction(
+          enhancementContext,
+        );
+        textExtractionResult = enhancementContext.textExtractionResult;
+        ocrResult = enhancementContext.ocrResult;
+      }
+
       // Run separately (not through runStage) because AiExtractionService
       // returns a controlled { status: 'failed' } result rather than throwing,
       // which requires different stage-status handling.
@@ -196,6 +263,7 @@ export class InvoicePipelineService {
         textExtractionResult,
         ocrResult,
       );
+      enhancementContext.aiResult = aiResult;
 
       stageTimings['ai_extraction'] = Date.now() - aiStart;
 
@@ -248,6 +316,36 @@ export class InvoicePipelineService {
         warningCount: aiResult.businessValidation?.warnings.length ?? 0,
       });
 
+      currentStage = 'table_reconstruction';
+      if (this.invoiceEnhancementService.isEnabled()) {
+        await runStage('table_reconstruction', async () => {
+          await this.invoiceEnhancementService.afterAiExtraction(
+            enhancementContext,
+          );
+        });
+      } else {
+        await skipStage('table_reconstruction', { enabled: false });
+      }
+
+      currentStage = 'mathematical_validation';
+      if (this.invoiceEnhancementService.isEnabled()) {
+        await runStage('mathematical_validation', async () => undefined, {
+          issueCount:
+            enhancementContext.metadata.mathValidation?.issueCount ?? 0,
+        });
+      } else {
+        await skipStage('mathematical_validation', { enabled: false });
+      }
+
+      currentStage = 'fake_invoice_detection';
+      if (this.invoiceEnhancementService.isEnabled()) {
+        await runStage('fake_invoice_detection', async () => undefined, {
+          flags: enhancementContext.metadata.fraudDetection?.flags ?? [],
+        });
+      } else {
+        await skipStage('fake_invoice_detection', { enabled: false });
+      }
+
       // ── Stage 8: duplicate_detection ──────────────────────────────────────
       currentStage = 'duplicate_detection';
       const { duplicateDetection, duplicateWarnings } =
@@ -258,10 +356,23 @@ export class InvoicePipelineService {
           log,
           stageTimings,
         );
+      enhancementContext.duplicateDetection = duplicateDetection;
+
+      currentStage = 'quality_analysis';
+      if (this.invoiceEnhancementService.isEnabled()) {
+        await runStage('quality_analysis', async () => {
+          await this.invoiceEnhancementService.afterDuplicateDetection(
+            enhancementContext,
+          );
+        });
+      } else {
+        await skipStage('quality_analysis', { enabled: false });
+      }
 
       // ── Aggregate all warnings ─────────────────────────────────────────────
       const warnings: PipelineWarning[] = [
         ...aiResult.warnings,
+        ...enhancementContext.warnings,
         ...duplicateWarnings,
       ];
 
@@ -271,6 +382,8 @@ export class InvoicePipelineService {
         inspectionResult,
         aiResult,
         duplicateDetection,
+        enhancementContext.warnings,
+        enhancementContext.metadata.qualityAnalysis?.status ?? null,
       );
 
       await this.processingStatusService.completeJob(documentId);
@@ -290,6 +403,10 @@ export class InvoicePipelineService {
         stageTimings,
         pipelineDurationMs,
         processedAt: new Date().toISOString(),
+        enhancements:
+          Object.keys(enhancementContext.metadata).length > 0
+            ? enhancementContext.metadata
+            : undefined,
       };
 
       return {
@@ -429,6 +546,8 @@ export class InvoicePipelineService {
     inspectionResult: InspectionResultDto,
     aiResult: AiExtractionResultDto,
     duplicateDetection: DuplicateDetectionResult | null,
+    enhancementWarnings: PipelineWarning[],
+    qualityStatus: string | null,
   ): 'completed' | 'partial' {
     const hasDuplicateSignal =
       duplicateDetection?.status === 'exact_duplicate' ||
@@ -438,7 +557,11 @@ export class InvoicePipelineService {
       inspectionResult.qualityWarnings.length > 0 ||
       aiResult.status === 'partial' ||
       aiResult.warnings.length > 0 ||
-      hasDuplicateSignal
+      enhancementWarnings.length > 0 ||
+      hasDuplicateSignal ||
+      qualityStatus === 'partial' ||
+      qualityStatus === 'needs_review' ||
+      qualityStatus === 'failed'
     ) {
       return 'partial';
     }
@@ -476,6 +599,7 @@ export class InvoicePipelineService {
         stageTimings,
         pipelineDurationMs: Date.now() - pipelineStart,
         processedAt: new Date().toISOString(),
+        enhancements: undefined,
       },
     };
   }

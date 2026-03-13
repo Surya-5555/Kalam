@@ -45,4 +45,19 @@ export class OcrResultDto {
 
   /** True when at least one page failed to process and was skipped */
   hadPartialFailure: boolean;
+
+  /** Optional engine selected by the OCR manager. */
+  engineUsed?: 'tesseract' | 'tesseract-preprocessed' | 'paddleocr' | 'regex';
+
+  /** Ordered list of engines/strategies attempted by the OCR manager. */
+  enginesTried?: string[];
+
+  /** True when the OCR manager selected a non-primary result. */
+  fallbackUsed?: boolean;
+
+  /** Optional page/image preprocessing metadata. */
+  preprocessingApplied?: string[];
+  orientationDegrees?: 0 | 90 | 180 | 270;
+  deskewAngle?: number;
+  blurScore?: number | null;
 }

@@ -124,18 +124,26 @@ function DocumentMetaCard({ doc }: { doc: InvoiceDocument }) {
 
 function ExtractionQualityCard({ data }: { data: StoredPipelineResult }) {
   const pct = Math.round((data.metadata?.overallConfidence ?? 0) * 100);
+  const level = pct >= 85 ? "high" : pct >= 60 ? "medium" : "low";
+  const levelLabel = level === "high" ? "High Confidence" : level === "medium" ? "Medium Confidence" : "Low Confidence";
   const color =
-    pct >= 85
-      ? "text-slate-900"
-      : pct >= 60
-        ? "text-slate-500"
-        : "text-slate-500";
+    level === "high"
+      ? "text-emerald-700"
+      : level === "medium"
+        ? "text-amber-700"
+        : "text-rose-700";
   const barColor =
-    pct >= 85
-      ? "bg-primary"
-      : pct >= 60
-        ? "bg-primary/80"
-        : "bg-primary/50";
+    level === "high"
+      ? "bg-emerald-500"
+      : level === "medium"
+        ? "bg-amber-500"
+        : "bg-rose-500";
+  const badgeBg =
+    level === "high"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : level === "medium"
+        ? "bg-amber-50 text-amber-700 border-amber-200"
+        : "bg-rose-50 text-rose-700 border-rose-200";
 
   return (
     <div className="bg-white border border-slate-200 shadow-sm rounded-2xl p-5 space-y-3">
@@ -144,21 +152,31 @@ function ExtractionQualityCard({ data }: { data: StoredPipelineResult }) {
       </p>
 
       <div className="flex items-end justify-between">
-        <span className={`text-3xl font-bold tabular-nums tracking-tight ${color}`}>
-          {pct}%
-        </span>
+        <div>
+          <span className={`text-3xl font-bold tabular-nums tracking-tight ${color}`}>
+            {pct}%
+          </span>
+          <span className={`ml-2 text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${badgeBg}`}>
+            {levelLabel}
+          </span>
+        </div>
         <span
-          className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
-            data.status === "completed"
-              ? "bg-slate-100 text-slate-900 border-slate-200"
-              : data.status === "partial"
-                ? "bg-slate-100 text-slate-900 border-slate-200"
-                : "bg-slate-100 text-slate-900 border-slate-200"
-          }`}
+          className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border bg-slate-100 text-slate-900 border-slate-200"
         >
           {data.status === "completed" ? "success" : data.status}
         </span>
       </div>
+
+      {level === "low" && (
+        <div className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2.5 text-xs text-rose-800 font-medium">
+          ⚠ Low confidence extraction — please double-check all fields before approving this invoice.
+        </div>
+      )}
+      {level === "medium" && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-800 font-medium">
+          ⚠ Medium confidence — some fields may need manual verification.
+        </div>
+      )}
 
       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden ring-1 ring-inset ring-border/20">
         <div
@@ -488,9 +506,20 @@ export default function ResultsPage() {
           {extracted && (
             <div className="mt-4 flex flex-wrap items-center justify-between gap-y-2 pt-4 border-t border-slate-100">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border border-slate-100 bg-slate-50 rounded-xl px-4 py-2">
-                <span className="flex items-center gap-1.5 text-sm font-bold text-slate-500">
-                  <Zap className="h-4 w-4 text-primary" />
-                  {Math.round((extracted.metadata?.overallConfidence ?? 0) * 100)}% confidence
+              <span className={`flex items-center gap-1.5 text-sm font-bold ${
+                    Math.round((extracted.metadata?.overallConfidence ?? 0) * 100) >= 85
+                      ? "text-emerald-700"
+                      : Math.round((extracted.metadata?.overallConfidence ?? 0) * 100) >= 60
+                        ? "text-amber-700"
+                        : "text-rose-700"
+                  }`}>
+                  <Zap className="h-4 w-4" />
+                  {Math.round((extracted.metadata?.overallConfidence ?? 0) * 100) >= 85
+                    ? "High Confidence"
+                    : Math.round((extracted.metadata?.overallConfidence ?? 0) * 100) >= 60
+                      ? "Medium Confidence"
+                      : "Low Confidence"}
+                  {" "}({Math.round((extracted.metadata?.overallConfidence ?? 0) * 100)}%)
                 </span>
                 <span className="w-px h-4 bg-border/60 hidden sm:block" />
                 {extracted.validation && (

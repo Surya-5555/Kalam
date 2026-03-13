@@ -135,8 +135,19 @@ function InvoiceSummary({ data }: { data: AiExtractionResult }) {
               Success
             </span>
           )}
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-            {(data.overallConfidence * 100).toFixed(0)}% confidence
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${
+              (data.overallConfidence * 100) >= 85
+                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                : (data.overallConfidence * 100) >= 60
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-rose-50 text-rose-700 border-rose-200"
+            }`}>
+            {(data.overallConfidence * 100) >= 85
+              ? "High Confidence"
+              : (data.overallConfidence * 100) >= 60
+                ? "Medium Confidence"
+                : "Low Confidence"}
+            {" "}({(data.overallConfidence * 100).toFixed(0)}%)
           </span>
         </div>
       </div>
@@ -271,57 +282,64 @@ export default function ProcessingPage() {
 
   // ── Render helpers ─────────────────────────────────────────────────────────
 
-  const renderStageList = (stages: StageRecord[]) => (
-    <ol className="space-y-3">
-      {stages.map((rec, idx) => {
-        const isLast = idx === stages.length - 1;
-        const duration = durationLabel(rec);
-        return (
-          <li key={rec.stage} className="relative flex items-start gap-3">
-            {/* Connector line */}
-            {!isLast && (
-              <span className="absolute left-2.25 top-6 h-full w-px bg-slate-100" />
-            )}
-            <StageIcon status={rec.status} />
-            <div className="flex-1 pb-1">
-              <div className="flex items-center justify-between">
-                <p
-                  className={`text-sm font-semibold leading-tight ${
-                    rec.status === "running"
-                      ? "text-blue-600"
-                      : rec.status === "failed"
-                        ? "text-rose-600"
-                        : rec.status === "skipped"
-                          ? "text-slate-400"
-                          : rec.status === "completed"
-                            ? "text-slate-800"
-                            : "text-slate-400"
-                  }`}
-                >
-                  {STAGE_LABELS[rec.stage]}
-                </p>
-                {duration && (
-                  <span className="text-xs text-slate-400 shrink-0 ml-2">
-                    {duration}
-                  </span>
+  const renderStageList = (stages: StageRecord[]) => {
+    // Only show stages that are completed, running, or failed — hide empty pending/skipped ones
+    const visibleStages = stages.filter(
+      (rec) => rec.status === "completed" || rec.status === "running" || rec.status === "failed" || rec.stage === "completed"
+    );
+
+    return (
+      <ol className="space-y-3">
+        {visibleStages.map((rec, idx) => {
+          const isLast = idx === visibleStages.length - 1;
+          const duration = durationLabel(rec);
+          return (
+            <li key={rec.stage} className="relative flex items-start gap-3">
+              {/* Connector line */}
+              {!isLast && (
+                <span className="absolute left-2.25 top-6 h-full w-px bg-slate-100" />
+              )}
+              <StageIcon status={rec.status} />
+              <div className="flex-1 pb-1">
+                <div className="flex items-center justify-between">
+                  <p
+                    className={`text-sm font-semibold leading-tight ${
+                      rec.status === "running"
+                        ? "text-blue-600"
+                        : rec.status === "failed"
+                          ? "text-rose-600"
+                          : rec.status === "skipped"
+                            ? "text-slate-400"
+                            : rec.status === "completed"
+                              ? "text-slate-800"
+                              : "text-slate-400"
+                    }`}
+                  >
+                    {STAGE_LABELS[rec.stage]}
+                  </p>
+                  {duration && (
+                    <span className="text-xs text-slate-400 shrink-0 ml-2">
+                      {duration}
+                    </span>
+                  )}
+                </div>
+                {rec.status === "running" && STAGE_DESCRIPTIONS[rec.stage] && (
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {STAGE_DESCRIPTIONS[rec.stage]}
+                  </p>
+                )}
+                {rec.failureReason && (
+                  <p className="text-xs text-rose-500 mt-0.5">
+                    {rec.failureReason}
+                  </p>
                 )}
               </div>
-              {rec.status === "running" && STAGE_DESCRIPTIONS[rec.stage] && (
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {STAGE_DESCRIPTIONS[rec.stage]}
-                </p>
-              )}
-              {rec.failureReason && (
-                <p className="text-xs text-rose-500 mt-0.5">
-                  {rec.failureReason}
-                </p>
-              )}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
+            </li>
+          );
+        })}
+      </ol>
+    );
+  };
 
   return (
     <RoleProtected mode="employee">

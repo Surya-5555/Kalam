@@ -538,33 +538,47 @@ export class InvoicePipelineService {
 
   /**
    * Determines the overall pipeline status based on qualitative signals across
-   * all stages.  A result is 'partial' whenever any warning-class condition is
-   * present — e.g. low OCR confidence, possible duplicate, schema repairs.
-   * Only a fully clean run with no warnings produces 'completed'.
+   * all stages.
+   *
+   * Returns 'partial' (mapped to 'needs_review' in DB) only for genuinely
+   * problematic conditions:
+   *  - Business validation produced errors (not just warnings)
+   *  - AI extraction itself returned 'partial' status
+   *  - Exact duplicate detected
+   *  - Quality analysis flagged as needs_review or failed
+   *  - Overall confidence is very low (< 50%)
+   *
+   * Minor warnings, schema repairs, and quality notes do NOT block 'completed'.
    */
   private computeStatus(
-    inspectionResult: InspectionResultDto,
+    _inspectionResult: InspectionResultDto,
     aiResult: AiExtractionResultDto,
     duplicateDetection: DuplicateDetectionResult | null,
-    enhancementWarnings: PipelineWarning[],
+    _enhancementWarnings: PipelineWarning[],
     qualityStatus: string | null,
   ): 'completed' | 'partial' {
-    const hasDuplicateSignal =
-      duplicateDetection?.status === 'exact_duplicate' ||
-      duplicateDetection?.status === 'possible_duplicate';
+    // AI extraction itself returned partial (missing critical fields)
+    if (aiResult.status === 'partial') return 'partial';
 
+    // Business validation has actual errors (not just warnings)
     if (
-      inspectionResult.qualityWarnings.length > 0 ||
-      aiResult.status === 'partial' ||
-      aiResult.warnings.length > 0 ||
-      enhancementWarnings.length > 0 ||
-      hasDuplicateSignal ||
-      qualityStatus === 'partial' ||
-      qualityStatus === 'needs_review' ||
-      qualityStatus === 'failed'
+      aiResult.businessValidation &&
+      aiResult.businessValidation.errors.length > 0
     ) {
       return 'partial';
     }
+
+    // Exact duplicate detected
+    if (duplicateDetection?.status === 'exact_duplicate') return 'partial';
+
+    // Quality analysis flagged serious issues
+    if (qualityStatus === 'needs_review' || qualityStatus === 'failed') {
+      return 'partial';
+    }
+
+    // Very low confidence extraction
+    if (aiResult.overallConfidence < 0.5) return 'partial';
+
     return 'completed';
   }
 

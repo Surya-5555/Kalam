@@ -33,6 +33,56 @@ export interface PipelineInput {
 /** Wall-clock duration in milliseconds for each pipeline stage. */
 export type StageTimings = Partial<Record<ProcessingStage, number>>;
 
+export interface PipelineEnhancementMetadata {
+  pdfFallback?: {
+    extractionMethod: 'pdftotext';
+    extractedCharacterCount: number;
+    pageCount: number;
+  };
+  preprocessing?: {
+    blurScore: number | null;
+    isBlurry: boolean;
+    orientationDegrees: 0 | 90 | 180 | 270;
+    deskewAngle: number;
+    preprocessingApplied: string[];
+    notes: string[];
+  };
+  ocrFallback?: {
+    engineUsed: string;
+    enginesTried: string[];
+    fallbackUsed: boolean;
+  };
+  multiPage?: {
+    pageCount: number;
+    totalsPageNumber: number | null;
+    itemPageNumbers: number[];
+  };
+  tableReconstruction?: {
+    reconstructed: boolean;
+    recoveredItemCount: number;
+    source: string;
+    mergedPages: number;
+    completenessScore: number;
+  };
+  mathValidation?: {
+    issueCount: number;
+  };
+  fraudDetection?: {
+    flags: string[];
+    issueCount: number;
+  };
+  qualityAnalysis?: {
+    score: number;
+    status: 'complete' | 'partial' | 'needs_review' | 'failed';
+    reasons: string[];
+    missingRequiredFields: string[];
+    validationErrorCount: number;
+    validationWarningCount: number;
+    tableCompletenessScore: number;
+    ocrConfidence: number | null;
+  };
+}
+
 // ─── Metadata ────────────────────────────────────────────────────────────────
 
 /**
@@ -58,6 +108,8 @@ export interface PipelineMetadata {
   pipelineDurationMs: number;
   /** ISO 8601 timestamp of when the pipeline completed (or failed). */
   processedAt: string;
+  /** Optional additive enhancement metadata produced by plugin modules. */
+  enhancements?: PipelineEnhancementMetadata;
 }
 
 // ─── Result ──────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import type { ValidationIssue } from '../../business-validation/types';
 import type { DuplicateDetectionResult } from '../../duplicate-detection/dto/duplicate-detection-result.dto';
 import type { PipelineWarning } from '../../common/pipeline-warning';
 import type { RepairRecord } from '../../ai-extraction/schema/invoice-schema.validator';
-import type { StageTimings } from './pipeline-io.dto';
+import type { PipelineEnhancementMetadata, StageTimings } from './pipeline-io.dto';
 
 /**
  * Flattened validation summary included in the API response.
@@ -47,6 +47,8 @@ export interface ProcessingMetadata {
   pipelineDurationMs: number;
   /** ISO 8601 timestamp of when processing completed. */
   processedAt: string;
+  /** Optional additive enhancement metadata. */
+  enhancements?: PipelineEnhancementMetadata;
 }
 
 /**

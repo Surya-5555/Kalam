@@ -75,7 +75,7 @@ export class AiExtractionService {
       const rawResponse = await this.llmProvider.complete(
         INVOICE_EXTRACTION_SYSTEM_PROMPT,
         userPrompt,
-        { maxTokens: 4096, temperature: 0 },
+        { maxTokens: 8192, temperature: 0 },
       );
 
       const { invoice, overallConfidence, warnings } =
@@ -128,7 +128,7 @@ export class AiExtractionService {
       });
 
       const status: AiExtractionResultDto['status'] =
-        allWarnings.length > 0 ? 'partial' : 'success';
+        mergedOverallConfidence < 0.5 ? 'partial' : 'success';
 
       return {
         status,

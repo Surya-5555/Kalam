@@ -55,6 +55,8 @@ function parseSupplier(raw: unknown): SupplierDetailsDto {
     phone: nullableString(r.phone),
     email: nullableString(r.email),
     taxId: nullableString(r.taxId),
+    gstin: nullableString(r.gstin),
+    pan: nullableString(r.pan),
     website: nullableString(r.website),
     confidence: clampConfidence(r.confidence),
   };
@@ -72,6 +74,8 @@ function parseBuyer(raw: unknown): BuyerDetailsDto {
     phone: nullableString(r.phone),
     email: nullableString(r.email),
     taxId: nullableString(r.taxId),
+    gstin: nullableString(r.gstin),
+    pan: nullableString(r.pan),
     confidence: clampConfidence(r.confidence),
   };
 }
@@ -87,7 +91,12 @@ function parseInvoiceDetails(raw: unknown): InvoiceDetailsDto {
     currency: nullableString(r.currency),
     paymentTerms: nullableString(r.paymentTerms),
     paymentTermsDays: nullableNumber(r.paymentTermsDays),
+    placeOfSupply: nullableString(r.placeOfSupply),
     notes: nullableString(r.notes),
+    bankName: nullableString(r.bankName),
+    bankAccountNumber: nullableString(r.bankAccountNumber),
+    bankIfsc: nullableString(r.bankIfsc),
+    bankBranch: nullableString(r.bankBranch),
     confidence: clampConfidence(r.confidence),
   };
 }
@@ -104,6 +113,7 @@ function parseLineItems(raw: unknown): LineItemDto[] {
       lineNumber:
         typeof i.lineNumber === 'number' ? i.lineNumber : idx + 1,
       description: nullableString(i.description),
+      hsnCode: nullableString(i.hsnCode),
       quantity: nullableNumber(i.quantity),
       unit: nullableString(i.unit),
       unitPrice: nullableNumber(i.unitPrice),

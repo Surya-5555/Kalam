@@ -18,6 +18,10 @@ export class SupplierDetailsDto {
   email: string | null;
   /** VAT / GST / EIN / PAN / ABN etc. */
   taxId: string | null;
+  /** GSTIN for Indian invoices. */
+  gstin: string | null;
+  /** PAN for Indian invoices. */
+  pan: string | null;
   website: string | null;
   /** Collective confidence for the supplier block (0–1). */
   confidence: Confidence;
@@ -33,6 +37,10 @@ export class BuyerDetailsDto {
   phone: string | null;
   email: string | null;
   taxId: string | null;
+  /** GSTIN for Indian invoices. */
+  gstin: string | null;
+  /** PAN for Indian invoices. */
+  pan: string | null;
   /** Collective confidence for the buyer block (0–1). */
   confidence: Confidence;
 }
@@ -60,7 +68,17 @@ export class InvoiceDetailsDto {
    * e.g. "Net 30" → 30, "Due on receipt" → 0, unparseable → null.
    */
   paymentTermsDays: number | null;
+  /** Place of supply (state/territory). */
+  placeOfSupply: string | null;
   notes: string | null;
+  /** Bank name for payment. */
+  bankName: string | null;
+  /** Bank account number. */
+  bankAccountNumber: string | null;
+  /** IFSC / SWIFT / routing code. */
+  bankIfsc: string | null;
+  /** Bank branch. */
+  bankBranch: string | null;
   /** Confidence for invoice-level metadata (0–1). */
   confidence: Confidence;
 }
@@ -68,6 +86,8 @@ export class InvoiceDetailsDto {
 export class LineItemDto {
   lineNumber: number;
   description: string | null;
+  /** HSN or SAC code for Indian GST invoices. */
+  hsnCode: string | null;
   quantity: number | null;
   unit: string | null;
   unitPrice: number | null;

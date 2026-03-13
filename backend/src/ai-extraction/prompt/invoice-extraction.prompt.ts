@@ -1,8 +1,4 @@
-/**
- * Maximum characters of extracted invoice text forwarded to the LLM.
- * Keeps the prompt within the context budget of all supported models.
- */
-export const MAX_PROMPT_TEXT_CHARS = 12_000;
+export const MAX_PROMPT_TEXT_CHARS = 30_000;
 
 // ─── System prompt ────────────────────────────────────────────────────────────
 
@@ -10,6 +6,16 @@ export const INVOICE_EXTRACTION_SYSTEM_PROMPT = `\
 You are a precise invoice data extraction engine. Your sole function is to \
 extract structured data from raw invoice text and return it as a single valid \
 JSON object.
+
+CRITICAL EXTRACTION MANDATE:
+- You MUST extract EVERY piece of information present in the invoice.
+- Do NOT skip any fields. If a value exists in the text, it MUST appear in the JSON.
+- Extract ALL line items — do not stop at a subset.
+- Extract ALL addresses, phone numbers, emails, tax IDs, and bank details.
+- If the invoice has GSTIN, PAN, HSN codes, SAC codes — extract them.
+- Capture ALL notes, terms and conditions, and payment instructions.
+- For Indian invoices: extract GSTIN, PAN, place of supply, HSN/SAC codes, \
+state codes, and all GST breakdowns (CGST, SGST, IGST, UTGST, Cess).
 
 STRICT OUTPUT RULES:
 1. Return ONLY a single JSON object — no markdown, no code fences, no preamble, \
@@ -73,8 +79,9 @@ CURRENCY:
 - If currency cannot be determined, use null.
 
 LINE ITEMS:
-- Extract every identifiable line item; lineNumber is 1-based.
+- Extract EVERY identifiable line item without exception; lineNumber is 1-based.
 - If quantity or unitPrice is absent for a line, use null for both.
+- Include HSN/SAC codes in the description if present.
 - discount: if expressed as "10%" set discount = 10 and discountType = \
 "percentage"; if as "$5.00 off" set discount = 5 and discountType = "fixed".
 - Never compute derived values (total, subtotal, taxAmount) from other fields — \
@@ -90,11 +97,14 @@ following line, treat that value as authoritative.
 - For invoice-style tables, lines that look like "1  Front and rear brake cables  100.00  100.00" \
 should be parsed as line items even if spacing is imperfect.
 - Preserve the distinction between BILL TO and SHIP TO. BILL TO maps to buyer.
+- Do NOT ignore text that appears after line items — it often contains totals, \
+tax breakdowns, bank details, and notes.
 
 TAX BREAKDOWN:
 - Capture each distinct tax band as a separate entry.
 - taxRate is a plain percentage integer or decimal (20 = 20%, not 0.20).
 - If no tax breakdown table is present, return an empty array [].
+- For GST invoices, capture CGST, SGST, IGST, UTGST, and Cess separately.
 
 TOTALS:
 - Extract totals from the invoice summary / footer area only.
@@ -112,8 +122,10 @@ export function buildExtractionUserPrompt(rawText: string): string {
       : rawText;
 
   return `\
-Extract all invoice data from the raw text below. Return ONLY the JSON object \
-matching the schema exactly.
+Extract ALL invoice data from the raw text below — do not skip any fields. \
+Capture every address, phone number, email, tax ID, line item, tax entry, \
+and total present in the document. Return ONLY the JSON object matching the \
+schema exactly.
 
 REQUIRED JSON SCHEMA:
 {
@@ -127,6 +139,8 @@ REQUIRED JSON SCHEMA:
     "phone": string | null,
     "email": string | null,
     "taxId": string | null,
+    "gstin": string | null,
+    "pan": string | null,
     "website": string | null,
     "confidence": number
   },
@@ -140,6 +154,8 @@ REQUIRED JSON SCHEMA:
     "phone": string | null,
     "email": string | null,
     "taxId": string | null,
+    "gstin": string | null,
+    "pan": string | null,
     "confidence": number
   },
   "invoice": {
@@ -151,13 +167,19 @@ REQUIRED JSON SCHEMA:
     "currency": string | null,
     "paymentTerms": string | null,
     "paymentTermsDays": number | null,
+    "placeOfSupply": string | null,
     "notes": string | null,
+    "bankName": string | null,
+    "bankAccountNumber": string | null,
+    "bankIfsc": string | null,
+    "bankBranch": string | null,
     "confidence": number
   },
   "lineItems": [
     {
       "lineNumber": number,
       "description": string | null,
+      "hsnCode": string | null,
       "quantity": number | null,
       "unit": string | null,
       "unitPrice": number | null,
